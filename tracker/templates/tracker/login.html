@@ -1,0 +1,85 @@
+{% extends 'tracker/base.html' %}
+{% block auth_content %}
+<div class="min-h-screen bg-[#0d1b2e] flex items-center justify-center p-6 relative overflow-hidden">
+  <!-- Decorative elements -->
+  <div class="absolute top-0 left-0 w-full h-full opacity-20 pointer-events-none">
+    <div class="absolute -top-24 -left-24 w-96 h-96 bg-blue-600 rounded-full blur-[120px]"></div>
+    <div class="absolute -bottom-24 -right-24 w-96 h-96 bg-violet-600 rounded-full blur-[120px]"></div>
+  </div>
+
+  <div class="w-full max-w-[420px] relative z-10">
+    <!-- Brand -->
+    <div class="text-center mb-10">
+      <div
+        class="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[22px] flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-blue-500/20 transform -rotate-3">
+        <i class="fa-solid fa-layer-group text-white text-3xl"></i>
+      </div>
+      <h1 class="text-white display text-4xl font-bold tracking-tight">Roles & Responsibilities Tracker</h1>
+      <p class="text-slate-400 text-[14px] mt-2 font-medium">Enterprise DevOps Resource Tracker</p>
+    </div>
+
+    <!-- Login Card -->
+    <div class="bg-white rounded-[28px] shadow-2xl p-10 border border-white/10">
+      <div class="mb-8">
+        <h2 class="display text-2xl font-bold text-slate-900">Welcome Back</h2>
+        <p class="text-slate-500 text-[14px] mt-1">Please enter your credentials to continue</p>
+      </div>
+
+      <form method="post" class="space-y-5">
+        {% csrf_token %}
+
+        {% if form.errors %}
+        <div class="p-4 bg-rose-50 border border-rose-100 rounded-xl flex items-start gap-3 fade-in">
+          <i class="fa-solid fa-circle-exclamation text-rose-500 mt-0.5"></i>
+          <p class="text-rose-700 text-[13px] font-medium leading-relaxed">
+            Access denied. Check your username and password.
+          </p>
+        </div>
+        {% endif %}
+
+        <div>
+          <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Username</label>
+          <div class="relative group">
+            <i
+              class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors"></i>
+            <input type="text" name="username" class="form-field !pl-12 !py-3.5 !bg-slate-50 focus:!bg-white"
+              placeholder="e.g. abinesh_s" required autofocus />
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2 px-1">
+            <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest">Password</label>
+            <a href="#"
+              class="text-[11px] font-bold text-blue-600 hover:text-blue-700 uppercase tracking-widest transition-colors">Forgot?</a>
+          </div>
+          <div class="relative group">
+            <i
+              class="fa-solid fa-lock absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-blue-500 transition-colors"></i>
+            <input type="password" name="password" class="form-field !pl-12 !py-3.5 !bg-slate-50 focus:!bg-white"
+              placeholder="••••••••" required />
+          </div>
+        </div>
+
+        <div class="pt-2">
+          <button type="submit"
+            class="w-full bg-[#0d1b2e] hover:bg-[#1a2c42] text-white rounded-xl py-4 font-bold text-[15px] transition-all flex items-center justify-center gap-3 shadow-xl shadow-slate-900/20 active:scale-[0.98]">
+            Sign In to Dashboard <i class="fa-solid fa-arrow-right text-xs opacity-50"></i>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Footer -->
+    <div class="mt-10 text-center space-y-4">
+      <div class="flex items-center justify-center gap-6">
+        <span class="text-slate-500 text-[12px] flex items-center gap-2"><i
+            class="fa-solid fa-shield-check text-emerald-500"></i> SSO Enabled</span>
+        <span class="text-slate-500 text-[12px] flex items-center gap-2"><i class="fa-solid fa-lock text-amber-500"></i>
+          256-bit AES</span>
+      </div>
+      <p class="text-slate-600 text-[11px] font-medium tracking-wide">© 2024 OPS TRACK SYSTEMS. ALL RIGHTS RESERVED.</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

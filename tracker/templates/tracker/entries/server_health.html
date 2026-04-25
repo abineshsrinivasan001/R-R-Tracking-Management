@@ -1,0 +1,232 @@
+{% extends 'tracker/base.html' %}
+{% block header_title %}Server Health Monitor{% endblock %}
+
+{% block content %}
+
+<!-- HERO BANNER -->
+<div class="bg-gradient-to-r from-[#0d1b2e] to-[#1e293b] rounded-[16px] p-[24px] mb-5 relative overflow-hidden shadow-lg border border-white/5">
+  <div class="absolute -top-[30px] -right-[30px] w-[140px] h-[140px] rounded-full bg-blue-500/10 pointer-events-none"></div>
+  <div class="relative z-10 flex items-center justify-between">
+    <div class="flex items-center gap-5">
+      <div class="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30">
+        <i class="fa-solid fa-server text-white text-2xl"></i>
+      </div>
+      <div>
+        <h2 class="display text-[20px] font-bold text-white mb-1">Fleet Health Analysis</h2>
+        <p class="text-slate-400 text-[13px] max-w-[450px]">Track system resource utilization across all production and staging nodes. Logging a server entry automatically completes your daily health check task.</p>
+      </div>
+    </div>
+    <button onclick="document.getElementById('entry-modal').classList.add('open')" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-bold text-sm transition-all flex items-center gap-2 shadow-lg shadow-blue-500/20">
+      <i class="fa-solid fa-plus"></i> New Server Log
+    </button>
+  </div>
+</div>
+
+<!-- ENTRIES TABLE -->
+<div class="bg-white rounded-[20px] border border-slate-200 shadow-sm overflow-hidden">
+  <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/30">
+    <div>
+      <h3 class="display text-[15px] font-bold text-slate-800">Historical Logs</h3>
+      <p class="text-[12px] text-slate-500 mt-0.5">Showing last 50 resource snapshots</p>
+    </div>
+    <div class="flex gap-2">
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]"></i>
+        <input type="text" placeholder="Search servers..." class="bg-white border border-slate-200 rounded-lg pl-9 pr-4 py-2 text-[12px] focus:outline-none focus:ring-2 focus:ring-blue-500/10 w-48 transition-all">
+      </div>
+    </div>
+  </div>
+  
+  <div class="overflow-x-auto">
+    <table class="w-full">
+      <thead>
+        <tr class="bg-slate-50/50">
+          <th class="text-left px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Date / Time</th>
+          <th class="text-left px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Server Node</th>
+          <th class="text-center px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest">CPU</th>
+          <th class="text-center px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Memory</th>
+          <th class="text-center px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Disk</th>
+          <th class="text-center px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
+          <th class="text-left px-6 py-4 text-[11px] font-bold text-slate-400 uppercase tracking-widest">Owner</th>
+          <th class="px-6 py-4 w-10"></th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for e in entries %}
+        <tr class="hover:bg-slate-50/70 transition-colors group">
+          <td class="px-6 py-4">
+            <div class="text-[13px] font-semibold text-slate-700">{{ e.date|date:"d M, Y" }}</div>
+            <div class="text-[10px] text-slate-400 mt-0.5">{{ e.created_at|time }}</div>
+          </td>
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-3">
+              <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-microchip"></i>
+              </div>
+              <div class="text-[14px] font-bold text-slate-800">{{ e.server_name }}</div>
+            </div>
+          </td>
+          <td class="px-6 py-4 text-center">
+            <div class="text-[13px] font-bold {% if e.cpu_usage > 85 %}text-rose-600{% elif e.cpu_usage > 70 %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ e.cpu_usage }}%</div>
+            <div class="w-16 h-1 bg-slate-100 rounded-full mx-auto mt-1.5 overflow-hidden">
+              <div class="h-full {% if e.cpu_usage > 85 %}bg-rose-500{% elif e.cpu_usage > 70 %}bg-amber-500{% else %}bg-emerald-500{% endif %}" style="width: {{ e.cpu_usage }}%"></div>
+            </div>
+          </td>
+          <td class="px-6 py-4 text-center">
+            <div class="text-[13px] font-bold {% if e.memory_usage > 85 %}text-rose-600{% elif e.memory_usage > 70 %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ e.memory_usage }}%</div>
+            <div class="w-16 h-1 bg-slate-100 rounded-full mx-auto mt-1.5 overflow-hidden">
+              <div class="h-full {% if e.memory_usage > 85 %}bg-rose-500{% elif e.memory_usage > 70 %}bg-amber-500{% else %}bg-emerald-500{% endif %}" style="width: {{ e.memory_usage }}%"></div>
+            </div>
+          </td>
+          <td class="px-6 py-4 text-center">
+            <div class="text-[13px] font-bold {% if e.disk_usage > 85 %}text-rose-600{% elif e.disk_usage > 70 %}text-amber-600{% else %}text-emerald-600{% endif %}">{{ e.disk_usage }}%</div>
+            <div class="w-16 h-1 bg-slate-100 rounded-full mx-auto mt-1.5 overflow-hidden">
+              <div class="h-full {% if e.disk_usage > 85 %}bg-rose-500{% elif e.disk_usage > 70 %}bg-amber-500{% else %}bg-emerald-500{% endif %}" style="width: {{ e.disk_usage }}%"></div>
+            </div>
+          </td>
+          <td class="px-6 py-4 text-center">
+            <span class="px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider
+              {% if e.status == 'normal' %}bg-emerald-50 text-emerald-700
+              {% elif e.status == 'warning' %}bg-amber-50 text-amber-700
+              {% else %}bg-rose-50 text-rose-700{% endif %}">
+              {{ e.get_status_display }}
+            </span>
+          </td>
+          <td class="px-6 py-4">
+            <div class="flex items-center gap-2">
+              <div class="w-6 h-6 rounded-md flex items-center justify-center text-[10px] font-bold text-white" style="background: {{ e.developer.developer.avatar_gradient }}">
+                {{ e.developer.developer.initials }}
+              </div>
+              <span class="text-[12px] font-medium text-slate-600">{{ e.developer.get_full_name|default:e.developer.username }}</span>
+            </div>
+          </td>
+          <td class="px-6 py-4">
+            <button class="text-slate-300 group-hover:text-blue-600 transition-colors">
+              <i class="fa-solid fa-ellipsis-vertical"></i>
+            </button>
+          </td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="8" class="px-6 py-20 text-center">
+            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i class="fa-solid fa-server text-slate-200 text-3xl"></i>
+            </div>
+            <h4 class="display text-[16px] font-bold text-slate-800">No logs recorded yet</h4>
+            <p class="text-slate-400 text-[13px] mt-1">Start monitoring your servers by creating the first log entry.</p>
+            <button onclick="document.getElementById('entry-modal').classList.add('open')" class="mt-6 bg-blue-50 text-blue-600 px-5 py-2.5 rounded-xl font-bold text-[13px] hover:bg-blue-100 transition-all">
+              + Create First Log
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ENTRY MODAL -->
+<div id="entry-modal" class="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-300">
+  <div class="bg-white rounded-[24px] w-full max-w-[650px] shadow-2xl transform scale-95 transition-transform duration-300 overflow-hidden">
+    <div class="bg-slate-50/80 px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+      <div>
+        <h3 class="display text-[18px] font-bold text-slate-900">New Health Snapshot</h3>
+        <p class="text-[12px] text-slate-500 mt-1">Capture resource utilization metrics for a specific node</p>
+      </div>
+      <button onclick="document.getElementById('entry-modal').classList.remove('open')" class="w-9 h-9 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-500 hover:bg-slate-50 transition-colors shadow-sm">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <form method="post" action="{% url 'server_health_create' %}" id="entry-form">
+      {% csrf_token %}
+      <div class="p-8 grid grid-cols-2 gap-6 max-h-[60vh] overflow-y-auto">
+        <div class="col-span-1">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Check Date</label>
+          {{ form.date }}
+        </div>
+        <div class="col-span-1">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Server Identifier</label>
+          {{ form.server_name }}
+        </div>
+        
+        <div class="col-span-2 grid grid-cols-4 gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-100">
+          <div>
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">CPU (%)</label>
+            {{ form.cpu_usage }}
+          </div>
+          <div>
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Memory (%)</label>
+            {{ form.memory_usage }}
+          </div>
+          <div>
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Disk (%)</label>
+            {{ form.disk_usage }}
+          </div>
+          <div>
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Net (%)</label>
+            {{ form.network_utilization }}
+          </div>
+        </div>
+
+        <div class="col-span-1">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest block mb-2">System Status</label>
+          {{ form.status }}
+        </div>
+        <div class="col-span-1 flex items-center pt-6">
+          <label class="flex items-center gap-3 cursor-pointer group">
+            {{ form.issue_found }}
+            <span class="text-[13px] font-semibold text-slate-700 group-hover:text-blue-600 transition-colors">Critical Issue Found?</span>
+          </label>
+        </div>
+
+        <div class="col-span-2">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Action Taken</label>
+          {{ form.action_taken }}
+        </div>
+        <div class="col-span-2">
+          <label class="text-[11px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Observations / Remarks</label>
+          {{ form.remarks }}
+        </div>
+      </div>
+
+      <div class="bg-slate-50/80 px-8 py-6 border-t border-slate-100 flex gap-3">
+        <button type="button" onclick="document.getElementById('entry-modal').classList.remove('open')" class="flex-1 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold text-sm hover:bg-slate-50 transition-all shadow-sm">Cancel</button>
+        <button type="submit" class="flex-[2] py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-sm hover:opacity-90 transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-500/20">
+          <i class="fa-solid fa-cloud-arrow-up"></i> Save Resource Log
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  // Modal open/close logic
+  const modal = document.getElementById('entry-modal');
+  const observer = new MutationObserver((mutations) => {
+    mutations.forEach((mutation) => {
+      if (mutation.attributeName === 'class') {
+        if (modal.classList.contains('open')) {
+          modal.classList.remove('hidden');
+          setTimeout(() => {
+            modal.classList.add('opacity-100');
+            modal.querySelector('div').classList.remove('scale-95');
+            modal.querySelector('div').classList.add('scale-100');
+          }, 10);
+        } else {
+          modal.classList.remove('opacity-100');
+          modal.querySelector('div').classList.remove('scale-100');
+          modal.querySelector('div').classList.add('scale-95');
+          setTimeout(() => modal.classList.add('hidden'), 300);
+        }
+      }
+    });
+  });
+  observer.observe(modal, { attributes: true });
+
+  window.onclick = (e) => { if (e.target === modal) modal.classList.remove('open'); }
+</script>
+{% endblock %}

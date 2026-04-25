@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}R&R Tracker{% endblock %}</title>
+
+  <!-- Fonts -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Bricolage+Grotesque:wght@600;700;800&display=swap"
+    rel="stylesheet" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            display: ['Bricolage Grotesque', 'sans-serif'],
+          },
+          colors: {
+            navy: {
+              DEFAULT: '#0d1b2e',
+              900: '#0d1b2e',
+              800: '#132338',
+              700: '#1a3a70',
+            },
+            slate: {
+              50: '#f8fafc',
+              100: '#f1f5f9',
+              200: '#e2e8f0',
+              300: '#cbd5e1',
+              400: '#94a3b8',
+              500: '#64748b',
+              600: '#475569',
+              700: '#334155',
+              800: '#1e293b',
+              900: '#0f172a',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: #f1f5f9;
+      color: #0f172a;
+    }
+
+    .display {
+      font-family: 'Bricolage Grotesque', sans-serif;
+    }
+
+    ::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 99px;
+    }
+
+    .nav-link.active {
+      color: #60a5fa;
+      background-color: rgba(59, 130, 246, 0.1);
+      border-left: 3px solid #3b82f6;
+    }
+
+    .nav-link {
+      border-left: 3px solid transparent;
+    }
+
+    #toast {
+      position: fixed;
+      bottom: 22px;
+      right: 22px;
+      z-index: 999;
+      background: #0f172a;
+      color: white;
+      padding: 11px 17px;
+      border-radius: 11px;
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      box-shadow: 0 8px 28px rgba(0, 0, 0, 0.25);
+      transform: translateY(70px);
+      opacity: 0;
+      transition: all 0.2s ease-out;
+    }
+
+    #toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+
+    .pbar {
+      height: 4px;
+      border-radius: 99px;
+      background: #e2e8f0;
+      overflow: hidden;
+    }
+
+    .pfill {
+      height: 100%;
+      border-radius: 99px;
+    }
+
+    .form-field {
+      width: 100%;
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #0f172a;
+      outline: none;
+    }
+
+    .form-field:focus {
+      background-color: #ffffff;
+      border-color: #3b82f6;
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+
+<body class="flex min-h-screen">
+
+  <!-- SIDEBAR -->
+  <aside id="sidebar"
+    class="w-64 min-h-screen bg-navy text-slate-400 fixed left-0 top-0 z-50 flex flex-col border-r border-white/5">
+    <!-- Logo -->
+    <div class="px-5 py-5 border-b border-white/10 flex items-center gap-3">
+      <div
+        class="w-10 h-10 bg-gradient-to-br from-blue-600 to-violet-600 rounded-xl flex items-center justify-center flex-shrink-0">
+        <i class="fa-solid fa-layer-group text-white text-base"></i>
+      </div>
+      <div>
+
+        <div class="text-[10px] font-medium text-slate-500 tracking-wider mt-1 uppercase">DevOps R&R Tracker</div>
+      </div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="flex-1 overflow-y-auto py-4">
+      <div class="px-5 py-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest">Main</div>
+      <a href="{% url 'dashboard' %}#dash"
+        class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5 {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+        id="link-dash">
+        <i class="fa-solid fa-gauge-high w-4 text-center"></i> Dashboard
+      </a>
+      <a href="{% url 'dashboard' %}#tasks"
+        class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5"
+        id="link-tasks">
+        <i class="fa-solid fa-list-check w-4 text-center"></i> My Tasks
+      </a>
+      <a href="{% url 'dashboard' %}#team"
+        class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5"
+        id="link-team">
+        <i class="fa-solid fa-users w-4 text-center"></i> Team DevOps
+      </a>
+
+      <a href="{% url 'dashboard' %}#log"
+        class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5"
+        id="link-log">
+        <i class="fa-solid fa-clock-rotate-left w-4 text-center"></i> Activity Log
+      </a>
+    </nav>
+
+    <!-- User Section -->
+    <div class="p-4 border-t border-white/10 bg-navy/50">
+      <div class="flex items-center gap-3">
+        <div
+          class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white text-xs font-bold shadow-lg">
+          {{ user.developer.initials|default:"AK" }}
+        </div>
+        <div class="flex-1 overflow-hidden">
+          <div class="text-white text-[13px] font-semibold leading-tight truncate">{{ user.get_full_name|default:user.username }}</div>
+          <div class="text-slate-500 text-[11px] truncate">{{ user.developer.role|default:"DevOps Engineer" }}</div>
+        </div>
+        <a href="{% url 'logout' %}" class="text-slate-500 hover:text-red-400 transition-colors">
+          <i class="fa-solid fa-right-from-bracket text-[13px]"></i>
+        </a>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN CONTENT -->
+  <main class="ml-64 flex-1 flex flex-col min-h-screen">
+    <!-- TOPBAR -->
+    <header
+      class="h-[62px] bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-40">
+      <div>
+        <h2 class="display text-[17px] font-bold text-slate-900">{% block header_title %}Dashboard{% endblock %}</h2>
+        <div class="text-[11.5px] text-slate-500 mt-0.5">
+          {% now "l, d F Y" %} &nbsp;·&nbsp; Sprint Week {% now "W" %}
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+
+        <div
+          class="w-[38px] h-[38px] bg-slate-100 rounded-lg flex items-center justify-center cursor-pointer relative hover:bg-slate-200 transition-colors">
+          <i class="fa-regular fa-bell text-slate-600 text-sm"></i>
+          <div class="w-[7px] h-[7px] bg-red-500 rounded-full absolute top-2 right-2 border-[1.5px] border-white"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- PAGE CONTENT -->
+    <div class="flex-1 p-6 fade-in">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <!-- TOAST -->
+  <div id="toast">
+    <i class="fa-solid fa-circle-check text-green-400"></i>
+    <span id="toast-text">Success!</span>
+  </div>
+
+  <script>
+    const CSRF = '{{ csrf_token }}';
+
+    function toast(msg) {
+      const el = document.getElementById('toast');
+      document.getElementById('toast-text').textContent = msg;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    function openQuickLog() {
+      // This will be implemented in the dashboard or specific pages if needed
+      console.log('Open Quick Log');
+      if (window.openQL) window.openQL();
+    }
+  </script>
+
+  {% block extra_scripts %}{% endblock %}
+
+</body>
+
+</html>
