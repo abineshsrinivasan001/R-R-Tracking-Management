@@ -55,3 +55,17 @@ def multiply(value, arg):
 @register.filter
 def jsonify(value):
     return json.dumps(value)
+
+@register.filter
+def get_range(value):
+    try:
+        return range(int(value))
+    except (ValueError, TypeError):
+        return range(0)
+
+@register.filter
+def percentage(value, total):
+    try:
+        return round((float(value) / float(total)) * 100) if float(total) != 0 else 0
+    except (ValueError, TypeError):
+        return 0

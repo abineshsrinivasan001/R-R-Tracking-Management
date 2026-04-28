@@ -159,11 +159,6 @@
         id="link-dash">
         <i class="fa-solid fa-gauge-high w-4 text-center"></i> Dashboard
       </a>
-      <a href="{% url 'dashboard' %}#tasks"
-        class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5"
-        id="link-tasks">
-        <i class="fa-solid fa-list-check w-4 text-center"></i> My Tasks
-      </a>
       <a href="{% url 'dashboard' %}#team"
         class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5"
         id="link-team">
@@ -175,6 +170,20 @@
         id="link-log">
         <i class="fa-solid fa-clock-rotate-left w-4 text-center"></i> Activity Log
       </a>
+
+      {% if request.user.developer.role == 'manager' or request.user.developer.role == 'tl' %}
+      <div class="px-5 pt-5 pb-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest">Administration</div>
+      <a href="{% url 'manager_dashboard' %}"
+        class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5 {% if request.resolver_match.url_name == 'manager_dashboard' %}active{% endif %}"
+        id="link-analytics">
+        <i class="fa-solid fa-chart-line w-4 text-center"></i> Team Analytics
+      </a>
+      <a href="{% url 'user_management' %}"
+        class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5 {% if request.resolver_match.url_name == 'user_management' %}active{% endif %}"
+        id="link-users">
+        <i class="fa-solid fa-user-gear w-4 text-center"></i> User Management
+      </a>
+      {% endif %}
     </nav>
 
     <!-- User Section -->
@@ -186,7 +195,12 @@
         </div>
         <div class="flex-1 overflow-hidden">
           <div class="text-white text-[13px] font-semibold leading-tight truncate">{{ user.get_full_name|default:user.username }}</div>
-          <div class="text-slate-500 text-[11px] truncate">{{ user.developer.role|default:"DevOps Engineer" }}</div>
+          <div class="text-slate-500 text-[11px] truncate">
+            {% if user.developer.role == 'manager' %}Manager
+            {% elif user.developer.role == 'tl' %}Team Lead
+            {% else %}{{ user.developer.job_title|default:"DevOps Engineer" }}
+            {% endif %}
+          </div>
         </div>
         <a href="{% url 'logout' %}" class="text-slate-500 hover:text-red-400 transition-colors">
           <i class="fa-solid fa-right-from-bracket text-[13px]"></i>

@@ -1,9 +1,16 @@
 from django.contrib import admin
-from .models import Developer, TaskLog, ServerHealthEntry, AlertCheckEntry, PipelineEntry, DeploymentEntry
+from .models import Developer, TaskLog, ServerHealthEntry, AlertCheckEntry, PipelineEntry, DeploymentEntry, Server, GeneralTaskEntry, TaskDefinition
 
 @admin.register(Developer)
 class DeveloperAdmin(admin.ModelAdmin):
-    list_display = ['user', 'role', 'initials']
+    list_display = ['user', 'role', 'job_title', 'initials']
+    list_filter = ['role']
+    search_fields = ['user__username', 'user__first_name', 'user__last_name']
+
+@admin.register(Server)
+class ServerAdmin(admin.ModelAdmin):
+    list_display = ['name', 'ip_address', 'status', 'owner', 'last_checked']
+    list_filter = ['status']
 
 @admin.register(TaskLog)
 class TaskLogAdmin(admin.ModelAdmin):

@@ -19,8 +19,14 @@ class Server(models.Model):
         return self.name
 
 class Developer(models.Model):
+    ROLE_CHOICES = [
+        ('manager', 'Manager'),
+        ('tl', 'Team Lead'),
+        ('developer', 'Developer'),
+    ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='developer')
-    role = models.CharField(max_length=100, default='DevOps Engineer')
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='developer')
+    job_title = models.CharField(max_length=100, default='DevOps Engineer', blank=True)
     avatar_gradient = models.CharField(max_length=200, default='linear-gradient(135deg,#2563eb,#06b6d4)')
     initials = models.CharField(max_length=4, blank=True)
 
@@ -29,6 +35,23 @@ class Developer(models.Model):
             name_parts = self.user.get_full_name().split()
             self.initials = ''.join(p[0] for p in name_parts[:2]).upper() if name_parts else self.user.username[:2].upper()
         super().save(*args, **kwargs)
+
+    @property
+    def is_manager(self):
+        return self.role == 'manager'
+
+    @property
+    def is_tl(self):
+        return self.role == 'tl'
+
+    @property
+    def is_developer(self):
+        return self.role == 'developer'
+
+    @property
+    def can_manage_users(self):
+        """Manager and TL can create users; developer cannot."""
+        return self.role in ('manager', 'tl')
 
     def __str__(self):
         return self.user.get_full_name() or self.user.username

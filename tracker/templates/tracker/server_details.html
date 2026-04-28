@@ -1,0 +1,252 @@
+{% extends 'tracker/base.html' %}
+{% load tracker_tags %}
+
+{% block title %}Server Details — {{ server.name }}{% endblock %}
+{% block header_title %}Server Details: {{ server.name }}{% endblock %}
+
+{% block extra_head %}
+<style>
+  .profile-hero {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    border-radius: 16px;
+    padding: 30px;
+    color: white;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 24px;
+    border: 1px solid rgba(255,255,255,0.05);
+  }
+  .hero-blob {
+    position: absolute;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, rgba(0,0,0,0) 70%);
+    border-radius: 50%;
+    top: -100px;
+    right: -50px;
+    pointer-events: none;
+  }
+  .kpi-box {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 16px;
+    backdrop-filter: blur(10px);
+  }
+  .kpi-title { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 700; margin-bottom: 4px; }
+  .kpi-value { font-size: 24px; font-weight: 800; color: white; display: flex; align-items: baseline; gap: 4px; }
+  .kpi-unit { font-size: 12px; font-weight: 600; color: #64748b; }
+  
+  .timeline {
+    position: relative;
+    padding-left: 20px;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    top: 0; bottom: 0; left: 6px;
+    width: 2px;
+    background: #e2e8f0;
+  }
+  .timeline-item {
+    position: relative;
+    margin-bottom: 24px;
+    padding-left: 20px;
+  }
+  .timeline-dot {
+    position: absolute;
+    left: -20px;
+    top: 6px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: white;
+    border: 3px solid #3b82f6;
+    z-index: 1;
+  }
+  .diff-card {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 12px;
+    font-size: 12px;
+    font-family: monospace;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto pb-12">
+  
+  <div class="flex items-center gap-3 mb-6">
+    <a href="javascript:history.back()" class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-slate-200 hover:text-slate-800 transition-colors">
+      <i class="fa-solid fa-arrow-left"></i>
+    </a>
+    <div>
+      <h1 class="text-2xl font-bold text-slate-900 leading-tight">Server Details</h1>
+      <p class="text-xs text-slate-500 font-medium">Detailed Infrastructure Audit Profile</p>
+    </div>
+  </div>
+
+  <!-- HERO SECTION -->
+  <div class="profile-hero shadow-xl shadow-slate-900/10">
+    <div class="hero-blob"></div>
+    <div class="relative z-10">
+      <div class="flex flex-col md:flex-row md:items-start justify-between gap-6 mb-8">
+        <div class="flex items-center gap-5">
+          <div class="w-16 h-16 rounded-2xl bg-blue-500/20 border border-blue-400/30 flex items-center justify-center text-blue-400 text-3xl shadow-inner">
+            <i class="fa-solid fa-server"></i>
+          </div>
+          <div>
+            <h2 class="text-3xl font-bold mb-1">{{ server.name }}</h2>
+            <div class="flex items-center gap-3 text-sm text-slate-300 font-mono">
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-network-wired text-slate-500"></i> {{ server.ip_address|default:"No IP Assigned" }}</span>
+              <span class="text-slate-600">|</span>
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-user-shield text-slate-500"></i> {{ server.owner.get_full_name|default:server.owner.username|default:"Unassigned" }}</span>
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <span class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-widest border
+            {% if server.status == 'up' %}bg-emerald-500/10 text-emerald-400 border-emerald-500/20
+            {% elif server.status == 'down' %}bg-rose-500/10 text-rose-400 border-rose-500/20
+            {% else %}bg-amber-500/10 text-amber-400 border-amber-500/20{% endif %}">
+            <span class="w-2 h-2 rounded-full {% if server.status == 'up' %}bg-emerald-400{% elif server.status == 'down' %}bg-rose-400{% else %}bg-amber-400{% endif %} animate-pulse"></span>
+            {{ server.get_status_display }}
+          </span>
+        </div>
+      </div>
+
+      <!-- HEALTH KPIs -->
+      {% with latest=health_entries.first %}
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="kpi-box">
+          <div class="kpi-title">CPU Utilization</div>
+          <div class="kpi-value {% if latest.cpu_usage > 85 %}text-rose-400{% elif latest.cpu_usage > 70 %}text-amber-400{% endif %}">
+            {{ latest.cpu_usage|default:"--" }}<span class="kpi-unit">%</span>
+          </div>
+        </div>
+        <div class="kpi-box">
+          <div class="kpi-title">Memory Allocation</div>
+          <div class="kpi-value {% if latest.memory_usage > 85 %}text-rose-400{% elif latest.memory_usage > 70 %}text-amber-400{% endif %}">
+            {{ latest.memory_usage|default:"--" }}<span class="kpi-unit">%</span>
+          </div>
+        </div>
+        <div class="kpi-box">
+          <div class="kpi-title">Disk Usage</div>
+          <div class="kpi-value {% if latest.disk_usage > 85 %}text-rose-400{% elif latest.disk_usage > 70 %}text-amber-400{% endif %}">
+            {{ latest.disk_usage|default:"--" }}<span class="kpi-unit">%</span>
+          </div>
+        </div>
+        <div class="kpi-box">
+          <div class="kpi-title">Total Verifications</div>
+          <div class="kpi-value text-blue-400">{{ total_tasks_done }}<span class="kpi-unit">Tasks</span></div>
+        </div>
+      </div>
+      {% endwith %}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    
+    <!-- LEFT COL: ACTIVITY TRACE & DIFF -->
+    <div class="lg:col-span-2 space-y-6">
+      
+      <!-- COMPREHENSIVE AUDIT TRACE -->
+      <div class="bg-white rounded-xl border border-slate-200 p-6 shadow-sm">
+        <h3 class="text-[15px] font-bold text-slate-900 mb-6 flex items-center gap-2">
+          <i class="fa-solid fa-clock-rotate-left text-blue-500"></i> Audit History (Before vs Now)
+        </h3>
+        
+        <div class="timeline">
+          {% for log in recent_logs %}
+          <div class="timeline-item">
+            <div class="timeline-dot {% if log.status == 'done' %}border-emerald-500{% elif log.status == 'blk' %}border-rose-500{% else %}border-amber-500{% endif %}"></div>
+            <div class="flex items-center justify-between mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-slate-100 text-slate-500">{{ log.get_category_display }}</span>
+                <span class="text-sm font-bold text-slate-800">{{ log.task_text }}</span>
+              </div>
+              <div class="text-[11px] font-medium text-slate-400">{{ log.logged_at|timesince }} ago</div>
+            </div>
+            
+            <div class="text-xs text-slate-500 mb-3 flex items-center gap-2">
+              Verified by <strong class="text-slate-700">{{ log.developer.get_full_name|default:log.developer.username }}</strong>
+            </div>
+
+            <!-- DIFF CARD (Before/After context) -->
+            {% if log.observations or log.action_taken or log.notes %}
+            <div class="diff-card space-y-2">
+              {% if log.observations %}
+              <div class="flex gap-2">
+                <span class="text-slate-400 w-24 shrink-0 font-bold uppercase text-[9px] tracking-wider">Observations</span>
+                <span class="text-slate-700">{{ log.observations }}</span>
+              </div>
+              {% endif %}
+              
+              {% if log.action_taken %}
+              <div class="flex gap-2">
+                <span class="text-slate-400 w-24 shrink-0 font-bold uppercase text-[9px] tracking-wider">Action Taken</span>
+                <span class="text-slate-700">{{ log.action_taken }}</span>
+              </div>
+              {% endif %}
+              
+              {% if log.outcome or log.notes %}
+              <div class="flex gap-2 pt-2 border-t border-slate-200/60">
+                <span class="text-slate-400 w-24 shrink-0 font-bold uppercase text-[9px] tracking-wider">Result / Now</span>
+                <span class="text-emerald-700 font-medium">{{ log.outcome|default:log.notes }}</span>
+              </div>
+              {% endif %}
+            </div>
+            {% else %}
+            <div class="text-xs text-slate-400 italic">No detailed observations recorded.</div>
+            {% endif %}
+          </div>
+          {% empty %}
+          <div class="text-sm text-slate-500 text-center py-4">No audit logs found for this server yet.</div>
+          {% endfor %}
+        </div>
+      </div>
+      
+    </div>
+
+    <!-- RIGHT COL: ALERTS & HEALTH SNAPSHOTS -->
+    <div class="space-y-6">
+      
+      <!-- LATEST ALERTS -->
+      <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+        <div class="p-5 border-b border-slate-100 bg-slate-50/50">
+          <h3 class="text-[13px] font-bold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-triangle-exclamation text-rose-500"></i> Recent Alerts
+          </h3>
+        </div>
+        <div class="p-0">
+          {% for alert in alert_entries %}
+          <div class="p-4 border-b border-slate-50 hover:bg-slate-50 transition-colors">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-slate-800">{{ alert.tool_name }}</span>
+              <span class="text-[10px] text-slate-400 font-medium">{{ alert.date|date:"M d" }}</span>
+            </div>
+            <p class="text-[11px] text-slate-600 line-clamp-2 mb-2">{{ alert.alert_description }}</p>
+            <div class="flex items-center gap-2">
+              <span class="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded 
+                {% if alert.status == 'resolved' %}bg-emerald-50 text-emerald-600{% else %}bg-rose-50 text-rose-600{% endif %}">
+                {{ alert.get_status_display }}
+              </span>
+              {% if alert.critical_alerts > 0 %}
+              <span class="text-[9px] font-bold text-rose-500"><i class="fa-solid fa-fire mr-1"></i>{{ alert.critical_alerts }} Critical</span>
+              {% endif %}
+            </div>
+          </div>
+          {% empty %}
+          <div class="p-5 text-center text-xs text-slate-400">No alerts recorded for this server.</div>
+          {% endfor %}
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+{% endblock %}
