@@ -510,33 +510,45 @@
 
       // Populate current/previous values for all fields
       if (data.fields_data || data.prev_fields_data) {
+        // Use 80ms to ensure renderDynamicFields has finished building DOM
         setTimeout(() => { 
           document.querySelectorAll('.dynamic-input').forEach(input => {
             const fieldKey = input.getAttribute('data-field');
             const container = input.closest('.field-card');
             if (!container) return;
             
-            // Set current value if it exists (for editing today's log)
-            if (data.exists && data.fields_data && data.fields_data[fieldKey]) {
-              input.value = data.fields_data[fieldKey];
+            // Set current value (for editing today's already-logged task)
+            if (data.exists && data.fields_data && data.fields_data[fieldKey] !== undefined && data.fields_data[fieldKey] !== '') {
+              if (input.tagName === 'SELECT') {
+                // For selects: find matching option (case-insensitive)
+                const val = data.fields_data[fieldKey];
+                const matchingOpt = Array.from(input.options).find(o => o.value.toLowerCase() === String(val).toLowerCase());
+                if (matchingOpt) {
+                  input.value = matchingOpt.value;
+                } else {
+                  input.value = val; // Try direct set anyway
+                }
+              } else {
+                input.value = data.fields_data[fieldKey];
+              }
             }
             
-            // Set "Last Value" badge if historical data exists
-            if (data.prev_fields_data && data.prev_fields_data[fieldKey]) {
-              let badge = container.querySelector('.prev-val-badge');
+            // Set "Prev:" badge from previous entry
+            const prevVal = data.prev_fields_data && data.prev_fields_data[fieldKey];
+            let badge = container.querySelector('.prev-val-badge');
+            if (prevVal !== undefined && prevVal !== null && prevVal !== '') {
               if (!badge) {
                 badge = document.createElement('span');
-                badge.className = 'prev-val-badge ml-2 px-1.5 py-0.5 rounded text-[9px] bg-slate-100 text-slate-500 font-bold';
+                badge.className = 'prev-val-badge ml-2 px-1.5 py-0.5 rounded text-[9px] bg-slate-100 text-slate-500 font-bold uppercase tracking-wide';
                 container.querySelector('label').appendChild(badge);
               }
-              badge.textContent = `Prev: ${data.prev_fields_data[fieldKey]}`;
+              badge.textContent = `Prev: ${prevVal}`;
               badge.classList.remove('hidden');
             } else {
-              const badge = container.querySelector('.prev-val-badge');
               if (badge) badge.classList.add('hidden');
             }
           });
-        }, 20);
+        }, 80);
       }
     } catch (e) {
       console.error("Error fetching task details:", e);

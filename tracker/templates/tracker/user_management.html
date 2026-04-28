@@ -28,13 +28,7 @@
 {% block content %}
 <div style="max-width:1200px">
 
-  <!-- Messages -->
-  {% for msg in messages %}
-  <div class="alert-msg {% if msg.tags == 'success' %}alert-success{% else %}alert-error{% endif %}">
-    <i class="fa-solid {% if msg.tags == 'success' %}fa-circle-check{% else %}fa-circle-exclamation{% endif %} mr-2"></i>
-    {{ msg }}
-  </div>
-  {% endfor %}
+
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 

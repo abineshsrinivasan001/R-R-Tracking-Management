@@ -11,6 +11,8 @@ urlpatterns = [
     path('api/task-details/', views.get_task_details, name='get_task_details'),
     path('server/<int:server_id>/', views.server_management, name='server_management'),
     path('server/<int:server_id>/details/', views.server_details, name='server_details'),
+    path('server/<int:server_id>/delete/', views.delete_server_view, name='delete_server'),
+    path('api/server/<int:server_id>/reassign/', views.reassign_server, name='reassign_server'),
 
     # Entry pages
     path('entries/server-health/', views.server_health_list, name='server_health_list'),
@@ -28,4 +30,7 @@ urlpatterns = [
     path('export/csv/', views.team_export_csv, name='team_export_csv'),
     path('export/servers-csv/', views.servers_export_csv, name='servers_export_csv'),
     path('api/team-analytics/', views.team_analytics_api, name='team_analytics_api'),
+
+    # ── Log Filter ───────────────────────────────────────────────
+    path('logs/', views.task_log_filter, name='task_log_filter'),
 ]

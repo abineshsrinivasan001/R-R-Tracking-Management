@@ -165,13 +165,14 @@
         <i class="fa-solid fa-users w-4 text-center"></i> Team DevOps
       </a>
 
-      <a href="{% url 'dashboard' %}#log"
-        class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5"
-        id="link-log">
-        <i class="fa-solid fa-clock-rotate-left w-4 text-center"></i> Activity Log
+      <div class="px-5 pt-5 pb-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest">Tools</div>
+      <a href="{% url 'task_log_filter' %}"
+        class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5 {% if request.resolver_match.url_name == 'task_log_filter' %}active{% endif %}"
+        id="link-logs">
+        <i class="fa-solid fa-filter w-4 text-center"></i> Log History
       </a>
 
-      {% if request.user.developer.role == 'manager' or request.user.developer.role == 'tl' %}
+      {% if request.user.is_superuser or request.user.is_staff or request.user.developer.role == 'manager' or request.user.developer.role == 'tl' %}
       <div class="px-5 pt-5 pb-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest">Administration</div>
       <a href="{% url 'manager_dashboard' %}"
         class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5 {% if request.resolver_match.url_name == 'manager_dashboard' %}active{% endif %}"
@@ -222,16 +223,27 @@
       </div>
       <div class="flex items-center gap-4">
 
-        <div
-          class="w-[38px] h-[38px] bg-slate-100 rounded-lg flex items-center justify-center cursor-pointer relative hover:bg-slate-200 transition-colors">
-          <i class="fa-regular fa-bell text-slate-600 text-sm"></i>
-          <div class="w-[7px] h-[7px] bg-red-500 rounded-full absolute top-2 right-2 border-[1.5px] border-white"></div>
-        </div>
+
       </div>
     </header>
 
     <!-- PAGE CONTENT -->
     <div class="flex-1 p-6 fade-in">
+      {% if messages %}
+        <div class="mb-5 space-y-3">
+          {% for message in messages %}
+            <div class="p-3.5 rounded-xl border flex items-center gap-3 text-sm font-medium
+              {% if message.tags == 'success' %}bg-emerald-50 border-emerald-100 text-emerald-700
+              {% elif message.tags == 'error' %}bg-rose-50 border-rose-100 text-rose-700
+              {% else %}bg-blue-50 border-blue-100 text-blue-700{% endif %}">
+              {% if message.tags == 'success' %}<i class="fa-solid fa-circle-check text-emerald-500"></i>
+              {% elif message.tags == 'error' %}<i class="fa-solid fa-circle-xmark text-rose-500"></i>
+              {% else %}<i class="fa-solid fa-circle-info text-blue-500"></i>{% endif %}
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
       {% block content %}{% endblock %}
     </div>
   </main>

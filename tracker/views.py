@@ -47,6 +47,120 @@ def get_dynamic_tasks():
 
 
 @login_required
+@require_POST
+def delete_server_view(request, server_id):
+    """Dedicated endpoint: Manager/TL/Superuser can delete a server."""
+    user = request.user
+    if user.is_superuser or user.is_staff:
+        viewer_role = 'manager'
+    else:
+        viewer_role = user.developer.role if hasattr(user, 'developer') else 'developer'
+
+    if viewer_role not in ('manager', 'tl'):
+        messages.error(request, 'Access denied — only Manager or TL can remove servers.')
+        return redirect('dashboard')
+
+    server = Server.objects.filter(id=server_id).first()
+    if server:
+        name = server.name
+        server.delete()
+        messages.success(request, f'Server "{name}" removed successfully.')
+    else:
+        messages.error(request, 'Server not found.')
+
+    # Redirect back to wherever the request came from
+    referer = request.META.get('HTTP_REFERER', '')
+    if 'manager' in referer:
+        return redirect('manager_dashboard')
+    return redirect('dashboard')
+
+
+@login_required
+def task_log_filter(request):
+    """Log history with date/category/status filters — for all roles."""
+    user = request.user
+    if user.is_superuser or user.is_staff:
+        viewer_role = 'manager'
+    else:
+        viewer_role = user.developer.role if hasattr(user, 'developer') else 'developer'
+
+    # ── Filter params ────────────────────────────────────────────
+    date_from_str = request.GET.get('date_from', '')
+    date_to_str   = request.GET.get('date_to', '')
+    category      = request.GET.get('category', '')      # d / w / m / ''
+    status        = request.GET.get('status', '')         # done / wip / blk / miss / ''
+    server_id     = request.GET.get('server_id', '')
+    developer_id  = request.GET.get('developer_id', '')  # manager/TL only
+
+    today = timezone.now().date()
+
+    if viewer_role in ('manager', 'tl'):
+        qs = TaskLog.objects.select_related('developer', 'server').order_by('-logged_at')
+    else:
+        qs = TaskLog.objects.filter(developer=user).select_related('developer', 'server').order_by('-logged_at')
+
+    # Apply filters
+    if date_from_str:
+        try:
+            qs = qs.filter(logged_at__date__gte=date_from_str)
+        except Exception:
+            pass
+    if date_to_str:
+        try:
+            qs = qs.filter(logged_at__date__lte=date_to_str)
+        except Exception:
+            pass
+    if category:
+        qs = qs.filter(category=category)
+    if status:
+        qs = qs.filter(status=status)
+    if server_id:
+        qs = qs.filter(server_id=server_id)
+    # Developer filter — only for manager/TL roles
+    if developer_id and viewer_role in ('manager', 'tl'):
+        qs = qs.filter(developer_id=developer_id)
+
+    # Quick summary cards for the filtered set
+    total   = qs.count()
+    done    = qs.filter(status='done').count()
+    blocked = qs.filter(status='blk').count()
+    pending = qs.filter(status='wip').count()
+
+    # Servers list for dropdown
+    if viewer_role in ('manager', 'tl'):
+        servers = Server.objects.all()
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        developers = User.objects.filter(
+            developer__isnull=False
+        ).select_related('developer').order_by('first_name', 'last_name', 'username')
+    else:
+        servers = Server.objects.filter(owner=user)
+        developers = []
+
+    context = {
+        'logs': qs[:500],
+        'viewer_role': viewer_role,
+        'today': today,
+        'servers': servers,
+        'developers': developers,
+        # active filters (to repopulate form)
+        'f_date_from': date_from_str,
+        'f_date_to': date_to_str,
+        'f_category': category,
+        'f_status': status,
+        'f_server_id': server_id,
+        'f_developer_id': developer_id,
+        # summary
+        'total': total,
+        'done': done,
+        'blocked': blocked,
+        'pending': pending,
+    }
+    return render(request, 'tracker/task_log_filter.html', context)
+
+
+@login_required
 def dashboard(request):
     user = request.user
     today = timezone.now().date()
@@ -87,19 +201,33 @@ def dashboard(request):
         all_logs = TaskLog.objects.filter(Q(developer=user) | Q(server__owner=user)).select_related('developer', 'server').order_by('-logged_at')[:50]
     server_list = []
     for s in servers:
-        # Daily
-        s_logs_d = TaskLog.objects.filter(server=s, category='d', logged_at__date=today, status='done')
-        s_done_d = s_logs_d.count()
-        
-        # Weekly (Last 7 days)
-        week_ago = today - datetime.timedelta(days=7)
-        s_logs_w = TaskLog.objects.filter(server=s, category='w', logged_at__date__gte=week_ago, status='done')
-        s_done_w = s_logs_w.count()
-        
-        # Monthly (Last 30 days)
-        month_ago = today - datetime.timedelta(days=30)
-        s_logs_m = TaskLog.objects.filter(server=s, category='m', logged_at__date__gte=month_ago, status='done')
-        s_done_m = s_logs_m.count()
+        # ── DAILY: tasks completed TODAY ─────────────────────
+        s_done_d = TaskLog.objects.filter(
+            server=s, category='d', logged_at__date=today, status='done'
+        ).values('task_id').distinct().count()
+
+        # ── WEEKLY: tasks completed THIS WEEK (Mon to today) ─
+        # week_start = Monday of the current week
+        week_start = today - datetime.timedelta(days=today.weekday())  # Monday
+        s_done_w = TaskLog.objects.filter(
+            server=s, category='w',
+            logged_at__date__gte=week_start,
+            logged_at__date__lte=today,
+            status='done'
+        ).values('task_id').distinct().count()
+
+        # ── MONTHLY: tasks completed THIS MONTH (1st to today) ─
+        month_start = today.replace(day=1)
+        s_done_m = TaskLog.objects.filter(
+            server=s, category='m',
+            logged_at__date__gte=month_start,
+            logged_at__date__lte=today,
+            status='done'
+        ).values('task_id').distinct().count()
+
+        d_total = len(task_data['d'])
+        w_total = len(task_data['w'])
+        m_total = len(task_data['m'])
 
         server_list.append({
             'id': s.id,
@@ -107,37 +235,42 @@ def dashboard(request):
             'ip': s.ip_address,
             'status': s.status,
             'last_checked': s.last_checked,
-            'daily_pct': round(s_done_d / len(task_data['d']) * 100) if task_data['d'] else 0,
-            'weekly_pct': round(s_done_w / len(task_data['w']) * 100) if task_data['w'] else 0,
-            'monthly_pct': round(s_done_m / len(task_data['m']) * 100) if task_data['m'] else 0,
-            'daily_done': s_done_d,
-            'daily_total': len(task_data['d']),
-            'weekly_done': s_done_w,
-            'weekly_total': len(task_data['w']),
-            'monthly_done': s_done_m,
-            'monthly_total': len(task_data['m']),
+            'daily_pct':   round(s_done_d / d_total * 100) if d_total else 0,
+            'weekly_pct':  round(s_done_w / w_total * 100) if w_total else 0,
+            'monthly_pct': round(s_done_m / m_total * 100) if m_total else 0,
+            'daily_done':   s_done_d,
+            'daily_total':  d_total,
+            'weekly_done':  s_done_w,
+            'weekly_total': w_total,
+            'monthly_done':  s_done_m,
+            'monthly_total': m_total,
             'history_7d': [],
         })
-        
-        # Add 7-day history for visualization
+
+        # ── 7-day daily history for heatmap ──────────────────
         for i in range(6, -1, -1):
             day_target = today - datetime.timedelta(days=i)
-            day_done = TaskLog.objects.filter(server=s, category='d', logged_at__date=day_target, status='done').count()
-            day_total = len(task_data['d'])
-            day_pct = round(day_done / day_total * 100) if day_total else 0
+            day_done = TaskLog.objects.filter(
+                server=s, category='d',
+                logged_at__date=day_target, status='done'
+            ).values('task_id').distinct().count()
+            day_pct = round(day_done / d_total * 100) if d_total else 0
             server_list[-1]['history_7d'].append({
                 'day': day_target.strftime('%a'),
                 'pct': day_pct,
                 'is_today': (i == 0)
             })
 
+
     # Team stats with real data
     team_members = []
     all_users = User.objects.filter(is_active=True).select_related('developer')
     for u in all_users:
-        u_today_done = TaskLog.objects.filter(developer=u, logged_at__date=today, status='done').count()
-        u_total_daily = len(task_data['d'])
+        u_today_done = TaskLog.objects.filter(developer=u, category='d', logged_at__date=today, status='done').count()
+        u_server_count = Server.objects.filter(owner=u).count()
+        u_total_daily = len(task_data['d']) * u_server_count
         u_pct = round(u_today_done / u_total_daily * 100) if u_total_daily else 0
+        if u_pct > 100: u_pct = 100
         
         team_members.append({
             'user': u,
@@ -205,10 +338,11 @@ def dashboard(request):
     hour = timezone.localtime(timezone.now()).hour
     greeting = 'Morning' if hour < 12 else ('Afternoon' if hour < 17 else 'Evening')
 
-    # --- TEAM STATS AGGREGATION ---
-    team_avg = round(sum(m['daily_pct'] for m in team_members) / len(team_members)) if team_members else 0
-    full_comp = sum(1 for m in team_members if m['daily_pct'] == 100)
-    needs_attn = sum(1 for m in team_members if m['daily_pct'] < 50)
+    # --- TEAM STATS AGGREGATION (Only include active members with servers) ---
+    active_members = [m for m in team_members if m['server_count'] > 0]
+    team_avg = round(sum(m['daily_pct'] for m in active_members) / len(active_members)) if active_members else 100
+    full_comp = sum(1 for m in active_members if m['daily_pct'] == 100)
+    needs_attn = sum(1 for m in active_members if m['daily_pct'] < 50)
 
     context = {
         'task_data': task_data,
@@ -295,46 +429,31 @@ def get_task_details(request):
     task_id = request.GET.get('task_id')
     server_id = request.GET.get('server_id')
     today = timezone.now().date()
-    
-    # Role-based check
-    if request.user.developer.role in ['manager', 'tl']:
+
+    user = request.user
+    # Safe role detection — superusers are treated as managers
+    if user.is_superuser or user.is_staff:
+        viewer_role = 'manager'
+    else:
+        viewer_role = user.developer.role if hasattr(user, 'developer') else 'developer'
+
+    # Server access check
+    if viewer_role in ('manager', 'tl'):
         server = get_object_or_404(Server, id=server_id)
     else:
-        server = get_object_or_404(Server, id=server_id, owner=request.user)
-    
-    if request.user.developer.role in ['manager', 'tl']:
-        log = TaskLog.objects.filter(
-            server=server, 
-            task_id=task_id, 
-            logged_at__date=today
-        ).first()
-    else:
-        log = TaskLog.objects.filter(
-            developer=request.user, 
-            server=server, 
-            task_id=task_id, 
-            logged_at__date=today
-        ).first()
-    
-    if request.user.developer.role in ['manager', 'tl']:
-        entry = GeneralTaskEntry.objects.filter(
-            server=server, 
-            task_id=task_id, 
-            date=today
-        ).first()
-    else:
-        entry = GeneralTaskEntry.objects.filter(
-            developer=request.user, 
-            server=server, 
-            task_id=task_id, 
-            date=today
-        ).first()
+        server = get_object_or_404(Server, id=server_id, owner=user)
 
-    # Fetch PREVIOUS entry for comparison (most recent before today)
+    # Today's task log
+    if viewer_role in ('manager', 'tl'):
+        log = TaskLog.objects.filter(server=server, task_id=task_id, logged_at__date=today).first()
+        entry = GeneralTaskEntry.objects.filter(server=server, task_id=task_id, date=today).first()
+    else:
+        log = TaskLog.objects.filter(developer=user, server=server, task_id=task_id, logged_at__date=today).first()
+        entry = GeneralTaskEntry.objects.filter(developer=user, server=server, task_id=task_id, date=today).first()
+
+    # Previous entry (most recent day before today)
     prev_entry = GeneralTaskEntry.objects.filter(
-        server=server, 
-        task_id=task_id, 
-        date__lt=today
+        server=server, task_id=task_id, date__lt=today
     ).order_by('-date').first()
 
     if not log:
@@ -343,8 +462,8 @@ def get_task_details(request):
             'prev_fields_data': prev_entry.fields_data if prev_entry else {}
         })
 
-    # Try to extract the clean notes (strip the [STATUS] prefix if it exists)
-    clean_notes = log.notes
+    # Strip [STATUS] prefix from notes if present
+    clean_notes = log.notes or ''
     if clean_notes.startswith('[') and ']' in clean_notes:
         clean_notes = clean_notes.split(']', 1)[1].strip()
 
@@ -568,6 +687,34 @@ def create_server(request):
     )
     return JsonResponse({'success': True, 'server_id': server.id, 'server_name': server.name})
 
+@login_required
+def reassign_server(request, server_id):
+    """AJAX endpoint: reassigns a server to a new owner."""
+    if request.method != 'POST':
+        return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+    
+    # Security: Only managers and TLs can reassign servers
+    viewer_role = request.user.developer.role if hasattr(request.user, 'developer') else 'developer'
+    if viewer_role not in ('manager', 'tl'):
+        return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
+        
+    try:
+        data = json.loads(request.body)
+        new_owner_id = data.get('owner_id')
+        server = get_object_or_404(Server, id=server_id)
+        
+        if new_owner_id:
+            new_owner = get_object_or_404(User, id=new_owner_id)
+            server.owner = new_owner
+        else:
+            server.owner = None
+            
+        server.save()
+        return JsonResponse({'success': True})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=400)
+
+
 
 @login_required
 def api_stats(request):
@@ -655,6 +802,17 @@ def manager_dashboard(request):
     task_data = get_dynamic_tasks()
     all_users = User.objects.filter(is_active=True).select_related('developer')
 
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        if action == 'delete_server':
+            server_id = request.POST.get('server_id')
+            server = Server.objects.filter(id=server_id).first()
+            if server:
+                name = server.name
+                server.delete()
+                messages.success(request, f'Server "{name}" removed successfully.')
+            return redirect('manager_dashboard')
+
     # ── Per-server stats ─────────────────────────────────────────
     d_total = len(task_data['d'])
     w_total = len(task_data['w'])
@@ -667,6 +825,18 @@ def manager_dashboard(request):
         s_done_m = TaskLog.objects.filter(server=s, category='m', logged_at__date__gte=month_ago, status='done').count()
         blk = TaskLog.objects.filter(server=s, logged_at__date=today, status='blk').count()
         
+        # Calculate 7-day history matrix
+        history_7d = []
+        for i in range(6, -1, -1):
+            day_target = today - datetime.timedelta(days=i)
+            day_done = TaskLog.objects.filter(server=s, category='d', logged_at__date=day_target, status='done').count()
+            day_pct = round(day_done / d_total * 100) if d_total else 0
+            history_7d.append({
+                'day': day_target.strftime('%a'),
+                'pct': day_pct,
+                'is_today': (i == 0)
+            })
+
         server_stats.append({
             'server': s,
             'owner_name': s.owner.get_full_name() or s.owner.username if s.owner else 'Unassigned',
@@ -682,6 +852,7 @@ def manager_dashboard(request):
             'monthly_done': s_done_m,
             'monthly_total': m_total,
             'blocked': blk,
+            'history_7d': history_7d,
         })
 
     # ── Team-wide KPIs ──────────────────────────────────────────
@@ -938,9 +1109,8 @@ def team_analytics_api(request):
 
 @login_required
 def server_details(request, server_id):
-    """Server Details (Detailed Infrastructure Audit View)."""
+    """Advanced Server Details — full intelligence audit view."""
     user = request.user
-    # Role-based check: Superusers/Staff are managers; otherwise check developer role.
     if user.is_superuser or user.is_staff:
         viewer_role = 'manager'
     else:
@@ -951,15 +1121,160 @@ def server_details(request, server_id):
     else:
         server = get_object_or_404(Server, id=server_id, owner=user)
 
-    recent_logs = TaskLog.objects.filter(server=server).select_related('developer').order_by('-logged_at')[:100]
-    health_entries = ServerHealthEntry.objects.filter(server_name=server.name).order_by('-date', '-created_at')[:14]
-    alert_entries = AlertCheckEntry.objects.filter(server=server).order_by('-date', '-created_at')[:10]
+    today = timezone.now().date()
+
+    # ── Health trend (last 7 days) ──────────────────────────────────
+    health_trend = []
+    all_health = list(
+        ServerHealthEntry.objects.filter(server_name=server.name).order_by('-date', '-created_at')
+    )
+    # Build a dict: date → latest entry for that day
+    health_by_day = {}
+    for h in all_health:
+        if h.date not in health_by_day:
+            health_by_day[h.date] = h
+
+    for i in range(6, -1, -1):
+        day = today - datetime.timedelta(days=i)
+        entry = health_by_day.get(day)
+        health_trend.append({
+            'day': day.strftime('%d %b'),
+            'short': day.strftime('%a'),
+            'is_today': (i == 0),
+            'cpu': float(entry.cpu_usage) if entry else None,
+            'memory': float(entry.memory_usage) if entry else None,
+            'disk': float(entry.disk_usage) if entry else None,
+            'network': float(entry.network_utilization) if entry else None,
+            'status': entry.status if entry else None,
+        })
+
+    latest_health = health_by_day.get(today) or (all_health[0] if all_health else None)
+    prev_health = None
+    for h in all_health:
+        if h.date < today:
+            prev_health = h
+            break
+
+    # ── Task category summaries ─────────────────────────────────────
+    from .models import TaskDefinition
+    task_counts = {}
+    for cat, label in [('d', 'Daily'), ('w', 'Weekly'), ('m', 'Monthly')]:
+        total = TaskDefinition.objects.filter(category=cat, is_active=True).count()
+        done = TaskLog.objects.filter(server=server, category=cat, status='done', logged_at__date=today).count()
+        task_counts[cat] = {'label': label, 'done': done, 'total': total,
+                             'pct': round(done / total * 100) if total else 0}
+
+    # ── Before vs Now: last two entries per task ────────────────────
+    all_entries = list(
+        GeneralTaskEntry.objects.filter(server=server)
+        .order_by('task_id', '-date')
+        .select_related('developer')
+    )
+    # Group by task_id, keep latest two
+    from itertools import groupby
+    task_comparisons = []
+    for task_id, group in groupby(all_entries, key=lambda e: e.task_id):
+        entries = list(group)
+        current = entries[0] if len(entries) >= 1 else None
+        previous = entries[1] if len(entries) >= 2 else None
+        if not current:
+            continue
+        # Build field-level comparison
+        fields = []
+        curr_data = current.fields_data or {}
+        prev_data = previous.fields_data if previous else {}
+        for key, curr_val in curr_data.items():
+            if key == 'verification_result':
+                continue
+            prev_val = prev_data.get(key, '')
+            # Detect change direction
+            change = 'same'
+            try:
+                if curr_val and prev_val:
+                    cf, pf = float(str(curr_val).replace('%', '')), float(str(prev_val).replace('%', ''))
+                    if cf > pf:
+                        change = 'up'
+                    elif cf < pf:
+                        change = 'down'
+            except (ValueError, TypeError):
+                change = 'changed' if str(curr_val) != str(prev_val) else 'same'
+            fields.append({'key': key.replace('_', ' ').title(), 'current': curr_val,
+                           'previous': prev_val, 'change': change})
+        task_comparisons.append({
+            'task_id': task_id,
+            'task_text': current.task_text,
+            'current_date': current.date,
+            'previous_date': previous.date if previous else None,
+            'current_status': current.status,
+            'developer': current.developer,
+            'fields': fields,
+        })
+    task_comparisons.sort(key=lambda x: x['current_date'], reverse=True)
+
+    # ── Alert stats ─────────────────────────────────────────────────
+    alert_entries = AlertCheckEntry.objects.filter(server=server).order_by('-date', '-created_at')[:20]
+    total_critical = sum(a.critical_alerts for a in alert_entries)
+    total_warning = sum(a.warning_alerts for a in alert_entries)
+    resolved_alerts = sum(1 for a in alert_entries if a.status == 'resolved')
+
+    # ── Recent logs ─────────────────────────────────────────────────
+    recent_logs = TaskLog.objects.filter(server=server).select_related('developer').order_by('-logged_at')[:50]
     total_tasks_done = TaskLog.objects.filter(server=server, status='done').count()
     total_blocks = TaskLog.objects.filter(server=server, status='blk').count()
-    
+    total_logs = TaskLog.objects.filter(server=server).count()
+
+    # ── Compliance score (overall %) ────────────────────────────────
+    compliance_pct = round(total_tasks_done / total_logs * 100) if total_logs else 0
+
+    # ── 7-day completion history for bar chart ──────────────────────
+    completion_7d = []
+    for i in range(6, -1, -1):
+        day = today - datetime.timedelta(days=i)
+        d_done = TaskLog.objects.filter(server=server, logged_at__date=day, status='done').count()
+        d_total = TaskLog.objects.filter(server=server, logged_at__date=day).count()
+        completion_7d.append({
+            'day': day.strftime('%a'),
+            'date': day.strftime('%d %b'),
+            'done': d_done,
+            'total': d_total,
+            'pct': round(d_done / d_total * 100) if d_total else 0,
+            'is_today': (i == 0),
+        })
+
+    # ── Server age ──────────────────────────────────────────────────
+    first_log = TaskLog.objects.filter(server=server).order_by('logged_at').first()
+    server_since = first_log.logged_at.date() if first_log else today
+
     context = {
-        'server': server, 'recent_logs': recent_logs, 'health_entries': health_entries,
-        'alert_entries': alert_entries, 'total_tasks_done': total_tasks_done,
-        'total_blocks': total_blocks, 'viewer_role': viewer_role,
+        'server': server,
+        'viewer_role': viewer_role,
+        'today': today,
+        # Health
+        'latest_health': latest_health,
+        'prev_health': prev_health,
+        'health_trend': health_trend,
+        'health_trend_json': json.dumps([
+            {'day': h['short'], 'cpu': h['cpu'], 'memory': h['memory'],
+             'disk': h['disk'], 'is_today': h['is_today']}
+            for h in health_trend
+        ]),
+        # Tasks
+        'task_counts': task_counts,
+        'task_comparisons': task_comparisons,
+        'total_tasks_done': total_tasks_done,
+        'total_blocks': total_blocks,
+        'total_logs': total_logs,
+        'compliance_pct': compliance_pct,
+        'completion_7d': completion_7d,
+        'completion_7d_json': json.dumps(completion_7d),
+        # Alerts
+        'alert_entries': alert_entries,
+        'total_critical': total_critical,
+        'total_warning': total_warning,
+        'resolved_alerts': resolved_alerts,
+        # Logs & meta
+        'recent_logs': recent_logs,
+        'server_since': server_since,
     }
     return render(request, 'tracker/server_details.html', context)
+

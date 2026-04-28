@@ -126,16 +126,23 @@
               <div class="text-[10px] text-slate-400 font-medium font-mono mt-0.5">{{ server.ip }}</div>
             </div>
           </div>
-          {% if viewer_role == 'manager' %}
-          <form method="post" onsubmit="return confirm('Remove {{ server.name }}?')">
-            {% csrf_token %}
-            <input type="hidden" name="action" value="delete_server">
-            <input type="hidden" name="server_id" value="{{ server.id }}">
-            <button type="submit" class="text-slate-300 hover:text-rose-500 transition-colors p-1"
-              title="Remove Server">
-              <i class="fa-solid fa-trash-can text-xs"></i>
+          {% if viewer_role == 'manager' or viewer_role == 'tl' %}
+          <div class="flex items-center gap-1.5">
+            <button onclick="openReassignModal('{{ server.id }}', '{{ server.name }}')"
+              class="text-slate-400 hover:text-blue-500 transition-colors p-1 rounded-lg hover:bg-blue-50"
+              title="Reassign Owner">
+              <i class="fa-solid fa-user-gear text-xs"></i>
             </button>
-          </form>
+            <form method="post" action="{% url 'delete_server' server.id %}"
+              onsubmit="return confirm('Remove ' + '{{ server.name }}' + '? This cannot be undone.')">
+              {% csrf_token %}
+              <button type="submit"
+                class="text-slate-400 hover:text-rose-500 transition-colors p-1 rounded-lg hover:bg-rose-50"
+                title="Remove Server">
+                <i class="fa-solid fa-trash-can text-xs"></i>
+              </button>
+            </form>
+          </div>
           {% endif %}
         </div>
         <div class="p-5">
@@ -152,34 +159,61 @@
               <div class="w-full h-1.5 rounded-full shadow-sm transition-all
                    {% if h.pct == 100 %}bg-blue-600
                    {% elif h.pct > 0 %}bg-blue-300
-                   {% else %}bg-slate-100{% endif %}"
-                   title="{{ h.day }}: {{ h.pct }}% Done"></div>
+                   {% else %}bg-slate-100{% endif %}" title="{{ h.day }}: {{ h.pct }}% Done"></div>
               <span class="text-[8px] font-bold {% if h.is_today %}text-blue-600{% else %}text-slate-400{% endif %} uppercase">{{ h.day|slice:":1" }}</span>
             </div>
             {% endfor %}
           </div>
 
           <!-- D/W/M PROGRESS LIST -->
-          <div class="space-y-3.5 mb-5">
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2.5">
-                <i class="fa-solid fa-calendar-day text-[12px] text-blue-500"></i> Daily Task
-              </span>
-              <span class="text-[12px] font-bold text-slate-800">{{ server.daily_done }}/{{ server.daily_total }}</span>
+          <div class="space-y-2.5 mb-5">
+            <!-- DAILY -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <i class="fa-solid fa-calendar-day text-[10px] text-blue-500"></i> Daily
+                  <span class="text-slate-300 font-normal normal-case">Today</span>
+                </span>
+                <span class="text-[11px] font-bold {% if server.daily_done == server.daily_total and server.daily_total > 0 %}text-emerald-600{% elif server.daily_done > 0 %}text-blue-600{% else %}text-slate-400{% endif %}">{{ server.daily_done }}/{{ server.daily_total }}</span>
+              </div>
+              <div class="h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  class="h-full rounded-full {% if server.daily_pct == 100 %}bg-emerald-500{% elif server.daily_pct > 0 %}bg-blue-500{% else %}bg-slate-200{% endif %} transition-all"
+                  style="width:{{ server.daily_pct }}%"></div>
+              </div>
             </div>
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2.5">
-                <i class="fa-solid fa-calendar-week text-[12px] text-emerald-500"></i> Weekly Task
-              </span>
-              <span class="text-[12px] font-bold text-slate-800">{{ server.weekly_done }}/{{ server.weekly_total }}</span>
+            <!-- WEEKLY -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <i class="fa-solid fa-calendar-week text-[10px] text-emerald-500"></i> Weekly
+                  <span class="text-slate-300 font-normal normal-case">This Week</span>
+                </span>
+                <span class="text-[11px] font-bold {% if server.weekly_done == server.weekly_total and server.weekly_total > 0 %}text-emerald-600{% elif server.weekly_done > 0 %}text-emerald-500{% else %}text-slate-400{% endif %}">{{ server.weekly_done }}/{{ server.weekly_total }}</span>
+              </div>
+              <div class="h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  class="h-full rounded-full {% if server.weekly_pct == 100 %}bg-emerald-500{% elif server.weekly_pct > 0 %}bg-emerald-400{% else %}bg-slate-200{% endif %} transition-all"
+                  style="width:{{ server.weekly_pct }}%"></div>
+              </div>
             </div>
-            <div class="flex items-center justify-between border-b border-slate-50 pb-2.5">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2.5">
-                <i class="fa-solid fa-calendar-check text-[12px] text-amber-500"></i> Monthly Task
-              </span>
-              <span class="text-[12px] font-bold text-slate-800">{{ server.monthly_done }}/{{ server.monthly_total }}</span>
+            <!-- MONTHLY -->
+            <div class="pb-1">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <i class="fa-solid fa-calendar-check text-[10px] text-amber-500"></i> Monthly
+                  <span class="text-slate-300 font-normal normal-case">This Month</span>
+                </span>
+                <span class="text-[11px] font-bold {% if server.monthly_done == server.monthly_total and server.monthly_total > 0 %}text-emerald-600{% elif server.monthly_done > 0 %}text-amber-500{% else %}text-slate-400{% endif %}">{{ server.monthly_done }}/{{ server.monthly_total }}</span>
+              </div>
+              <div class="h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  class="h-full rounded-full {% if server.monthly_pct == 100 %}bg-emerald-500{% elif server.monthly_pct > 0 %}bg-amber-400{% else %}bg-slate-200{% endif %} transition-all"
+                  style="width:{{ server.monthly_pct }}%"></div>
+              </div>
             </div>
           </div>
+
 
           <div class="flex gap-2">
             <a href="{% url 'server_management' server.id %}"
@@ -212,115 +246,35 @@
     </div>
   </div>
 
-  <!-- ── ANALYTICS ROW ─────────────────────────────────────────── -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
 
-    <!-- Compliance Wheel -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-[13px] font-bold text-slate-800 flex items-center gap-2">
-          <i class="fa-solid fa-circle-half-stroke text-emerald-500"></i> Today's Compliance
-        </h3>
-        <span
-          class="text-[9px] font-bold text-slate-400 uppercase tracking-widest cursor-pointer hover:text-blue-500 transition-colors"
-          onclick="filterCompliance('all')" title="Reset Filter">Live <i
-            class="fa-solid fa-filter ml-0.5 text-[8px]"></i></span>
-      </div>
-      <div class="relative h-[180px] flex items-center justify-center">
-        <canvas id="complianceChart"></canvas>
-        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span class="text-[22px] font-bold text-slate-900 leading-none">{{ servers|length }}</span>
-          <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Servers</span>
-        </div>
-      </div>
-      <div class="mt-4 grid grid-cols-3 gap-2 text-center" title="Click to filter servers">
-        <button onclick="filterCompliance('full')"
-          class="comp-btn bg-emerald-50 hover:bg-emerald-100 transition-all rounded-xl p-2 border-2 border-transparent outline-none focus:border-emerald-200 cursor-pointer w-full group">
-          <div
-            class="text-[15px] font-bold text-emerald-700 pointer-events-none group-hover:scale-110 transition-transform">
-            {{ compliance.full }}</div>
-          <div class="text-[9px] font-bold text-emerald-500 uppercase tracking-wide pointer-events-none">Done</div>
-        </button>
-        <button onclick="filterCompliance('partial')"
-          class="comp-btn bg-blue-50 hover:bg-blue-100 transition-all rounded-xl p-2 border-2 border-transparent outline-none focus:border-blue-200 cursor-pointer w-full group">
-          <div
-            class="text-[15px] font-bold text-blue-700 pointer-events-none group-hover:scale-110 transition-transform">
-            {{ compliance.partial }}</div>
-          <div class="text-[9px] font-bold text-blue-500 uppercase tracking-wide pointer-events-none">Partial</div>
-        </button>
-        <button onclick="filterCompliance('none')"
-          class="comp-btn bg-slate-50 hover:bg-slate-100 transition-all rounded-xl p-2 border-2 border-transparent outline-none focus:border-slate-300 cursor-pointer w-full group">
-          <div
-            class="text-[15px] font-bold text-slate-600 pointer-events-none group-hover:scale-110 transition-transform">
-            {{ compliance.none }}</div>
-          <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wide pointer-events-none">Pending</div>
-        </button>
-      </div>
-    </div>
 
-    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-6 shadow-sm">
-      <div class="flex items-center justify-between mb-6">
-        <div>
-          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <i class="fa-solid fa-chart-simple text-indigo-600"></i> Performance Matrix
-          </h3>
-          <p class="text-[11px] text-slate-400 mt-0.5 uppercase tracking-tight font-bold">Node-Level Completion Status
-          </p>
-        </div>
-        <div class="flex items-center gap-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-blue-500/80"></span> Daily</span>
-          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-emerald-500/80"></span>
-            Weekly</span>
-          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded bg-amber-500/80"></span>
-            Monthly</span>
-        </div>
-      </div>
-      <div class="h-[250px]">
-        <canvas id="matrixChart"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <!-- ── PER-SERVER LOGS (Tabbed) ──────────────────────────────── -->
+  <!-- ── Quick Shortcuts: Jump to Server Logs ── -->
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
     <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
       <h3 class="text-[13px] font-bold text-slate-800 flex items-center gap-2">
-        <i class="fa-solid fa-scroll text-slate-500"></i> Server Activity Logs
+        <i class="fa-solid fa-arrow-up-right-from-square text-blue-500"></i> Quick Log Access
       </h3>
-      <span class="text-[10px] text-slate-400">Select a server tab to view its logs</span>
+      <a href="{% url 'task_log_filter' %}"
+        class="text-[11px] text-blue-600 font-bold hover:underline flex items-center gap-1">
+        View All Logs <i class="fa-solid fa-arrow-right text-[9px]"></i>
+      </a>
     </div>
-
-    <!-- Server Tabs -->
-    <div class="flex gap-1 px-4 pt-3 border-b border-slate-100 overflow-x-auto" id="server-log-tabs">
+    <div class="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
       {% for server in servers %}
-      <button onclick="loadServerLog({{ server.id }}, '{{ server.name }}')" id="slog-tab-{{ server.id }}"
-        class="slog-tab px-4 py-2 text-[11px] font-bold rounded-t-xl whitespace-nowrap transition-all border-b-2 border-transparent text-slate-500 hover:text-slate-800{% if forloop.first %} active-slog-tab{% endif %}">
-        <i class="fa-solid fa-server text-[10px] mr-1"></i>{{ server.name }}
-      </button>
+      <a href="{% url 'task_log_filter' %}?server_id={{ server.id }}"
+        class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all group">
+        <div
+          class="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center flex-shrink-0 transition-colors">
+          <i class="fa-solid fa-server text-slate-500 group-hover:text-blue-600 text-xs transition-colors"></i>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[12px] font-bold text-slate-800 truncate">{{ server.name }}</div>
+          <div class="text-[10px] text-slate-400 font-mono">{{ server.ip|default:"—" }}</div>
+        </div>
+      </a>
+      {% empty %}
+      <div class="col-span-full py-6 text-center text-slate-400 text-xs">No servers yet.</div>
       {% endfor %}
-    </div>
-
-    <!-- Log Body -->
-    <div id="server-log-body" class="overflow-x-auto min-h-[200px]">
-      <div id="server-log-loading" class="flex items-center justify-center py-16 text-slate-400">
-        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Loading logs...
-      </div>
-      <table class="w-full text-left hidden" id="server-log-table">
-        <thead>
-          <tr class="bg-slate-50 border-b border-slate-100">
-            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date & Time</th>
-            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Task</th>
-            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category</th>
-            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Engineer</th>
-            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
-            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Notes</th>
-          </tr>
-        </thead>
-        <tbody id="server-log-rows" class="divide-y divide-slate-50"></tbody>
-      </table>
-      <div id="server-log-empty" class="hidden flex items-center justify-center py-16 text-slate-400 text-[12px]">
-        <i class="fa-regular fa-folder-open mr-2"></i> No logs found for this server yet.
-      </div>
     </div>
   </div>
 
@@ -330,79 +284,96 @@
 
 <!-- OTHER SECTIONS (Team, Log, etc.) -->
 <div id="page-team" class="page-section hidden">
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+  <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <h3 class="display text-[20px] font-bold text-slate-900">Team Performance</h3>
+      <p class="text-[12px] text-slate-500">Real-time compliance and system coverage across the DevOps team</p>
+    </div>
+    <div
+      class="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100/50 px-3 py-1.5 rounded-lg border border-slate-200/60">
+      <i class="fa-solid fa-clock text-blue-500"></i>
+      Last Sync: {% now "H:i" %}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div
+      class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-center">
       <div class="flex items-center gap-4">
-        <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-          <i class="fa-solid fa-chart-line text-lg"></i>
+        <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0">
+          <i class="fa-solid fa-chart-line text-xl"></i>
         </div>
-        <div>
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Team Average</div>
-          <div class="display text-2xl font-bold text-slate-900">{{ team_avg }}%</div>
+        <div class="min-w-0">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Team Average</div>
+          <div class="display text-2xl font-bold text-slate-900 leading-none">{{ team_avg }}%</div>
         </div>
       </div>
     </div>
 
-    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+    <div
+      class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-center">
       <div class="flex items-center gap-4">
-        <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-          <i class="fa-solid fa-trophy text-lg"></i>
+        <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0">
+          <i class="fa-solid fa-trophy text-xl"></i>
         </div>
-        <div>
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Full Completion</div>
-          <div class="display text-2xl font-bold text-slate-900">{{ full_comp }}</div>
+        <div class="min-w-0">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Full Completion</div>
+          <div class="display text-2xl font-bold text-slate-900 leading-none">{{ full_comp }}</div>
         </div>
       </div>
     </div>
 
-    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+    <div
+      class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-center">
       <div class="flex items-center gap-4">
-        <div class="w-10 h-10 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600">
-          <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+        <div class="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 flex-shrink-0">
+          <i class="fa-solid fa-triangle-exclamation text-xl"></i>
         </div>
-        <div>
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Needs Attention</div>
-          <div class="display text-2xl font-bold text-rose-600">{{ needs_attn }}</div>
+        <div class="min-w-0">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Needs Attention</div>
+          <div class="display text-2xl font-bold text-rose-600 leading-none">{{ needs_attn }}</div>
         </div>
       </div>
     </div>
 
-    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+    <div
+      class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-center">
       <div class="flex items-center gap-4">
-        <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-          <i class="fa-solid fa-users text-lg"></i>
+        <div class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 flex-shrink-0">
+          <i class="fa-solid fa-users text-xl"></i>
         </div>
-        <div>
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Total Members</div>
-          <div class="display text-2xl font-bold text-slate-900">{{ team_members|length }}</div>
+        <div class="min-w-0">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Members</div>
+          <div class="display text-2xl font-bold text-slate-900 leading-none">{{ team_members|length }}</div>
         </div>
       </div>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
     {% for member in team_members %}
     <div
-      class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-lg hover:border-blue-200 transition-all group">
+      class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-lg hover:border-blue-200 transition-all group flex flex-col">
       <div class="p-4 border-b border-slate-100 bg-slate-50/50">
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-sm shadow-md transition-all"
+          <div
+            class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-[13px] shadow-md transition-all flex-shrink-0"
             style="background: {{ member.gradient }}">
             {{ member.initials }}
           </div>
-          <div class="overflow-hidden">
-            <h4 class="text-[15px] font-bold text-slate-900 truncate">{{ member.user.get_full_name|default:member.user.username }}</h4>
-            <div class="flex items-center gap-2">
+          <div class="min-w-0">
+            <h4 class="text-[13.5px] font-bold text-slate-900 truncate mb-0.5">{{ member.user.get_full_name|default:member.user.username }}</h4>
+            <div class="flex items-center gap-1.5">
               <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">{{ member.role }}</p>
+              <p class="text-[9px] text-slate-500 uppercase font-bold tracking-widest">{{ member.role }}</p>
             </div>
           </div>
         </div>
       </div>
-      <div class="p-5 space-y-5">
+      <div class="p-4 flex-1 flex flex-col space-y-4">
         <div>
-          <div class="flex justify-between items-center text-[12px] mb-2">
-            <span class="text-slate-500 font-medium">Daily Compliance</span>
+          <div class="flex justify-between items-center text-[11px] mb-1.5">
+            <span class="text-slate-500 font-semibold">Daily Compliance</span>
             <span class="font-bold text-blue-600">{{ member.daily_pct }}%</span>
           </div>
           <div class="pbar h-1.5 bg-slate-100 rounded-full overflow-hidden">
@@ -413,126 +384,67 @@
         </div>
 
         <div>
-          <div class="flex justify-between items-center text-[12px] mb-2">
-            <span class="text-slate-500 font-medium">System Coverage</span>
+          <div class="flex justify-between items-center text-[11px] mb-1.5">
+            <span class="text-slate-500 font-semibold">System Coverage</span>
             <span class="font-bold text-slate-900">{{ member.server_count }} Nodes</span>
           </div>
           <div class="pbar h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            {% with total_srv=servers|length %}
             <div class="h-full bg-slate-300 rounded-full"
-              style="width: {% if total_srv > 0 %}{{ member.server_count|percentage:total_srv }}{% else %}0{% endif %}%">
+              style="width: {% if servers|length > 0 %}{{ member.server_count|percentage:servers|length }}{% else %}0{% endif %}%">
             </div>
-            {% endwith %}
           </div>
         </div>
 
-        <div class="flex items-center justify-between pt-4 border-t border-slate-100">
+        <div class="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
           <div class="flex -space-x-1.5">
             {% for i in member.server_count|get_range %}
-            <div
-              class="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[8px] font-bold text-slate-400"
+            {% if forloop.counter <= 4 %} <div
+              class="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[7px] font-bold text-slate-400 shadow-sm"
               title="Managed Server">SRV</div>
-            {% endfor %}
-            {% if member.server_count == 0 %}
-            <span class="text-[10px] text-slate-300 italic">No nodes assigned</span>
-            {% endif %}
+          {% endif %}
+          {% endfor %}
+          {% if member.server_count > 4 %}
+          <div
+            class="w-6 h-6 rounded-full border-2 border-white bg-blue-50 flex items-center justify-center text-[8px] font-bold text-blue-600 shadow-sm">
+            +{{ member.server_count|subtract:4 }}</div>
+          {% endif %}
+          {% if member.server_count == 0 %}
+          <div
+            class="w-6 h-6 rounded-full border-2 border-dashed border-slate-200 bg-slate-50/50 flex items-center justify-center"
+            title="No nodes assigned">
+            <i class="fa-solid fa-minus text-[8px] text-slate-300"></i>
           </div>
-          <button onclick="viewUserDetails('{{ member.user.username|lower }}')"
-            class="text-[11px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 transition-colors">
-            View Details <i class="fa-solid fa-arrow-right text-[10px]"></i>
-          </button>
+          {% endif %}
         </div>
+        <button onclick="viewUserDetails('{{ member.user.id }}')"
+          class="text-[10px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-blue-50 transition-all">
+          Details <i class="fa-solid fa-chevron-right text-[8px]"></i>
+        </button>
       </div>
     </div>
-    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+</div>
+
+<!-- ACTIVITY LOG REDIRECT — logs live at /logs/ now -->
+<div id="page-log" class="page-section hidden">
+  <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
+    <div class="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-5">
+      <i class="fa-solid fa-filter text-blue-500 text-2xl"></i>
+    </div>
+    <h3 class="text-xl font-bold text-slate-900 mb-2">Task Log History</h3>
+    <p class="text-slate-500 text-sm mb-6 max-w-sm mx-auto">
+      Use the dedicated Log History page to filter by date, category, status, and server. All logs in one searchable
+      place.
+    </p>
+    <a href="{% url 'task_log_filter' %}"
+      class="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-all shadow-md">
+      <i class="fa-solid fa-arrow-right"></i> Open Log History
+    </a>
   </div>
 </div>
 
-<!-- ACTIVITY LOG SECTION -->
-<div id="page-log" class="page-section hidden">
-  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-    <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/30 flex justify-between items-center">
-      <div>
-        <h3 class="display text-[15px] font-bold text-slate-900">Activity Log</h3>
-        <p class="text-[10px] text-slate-400 mt-1 uppercase tracking-widest font-bold">Comprehensive History</p>
-      </div>
-      <div class="flex gap-2">
-        <select id="log-user-filter" onchange="filterLogs()"
-          class="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-[11px] font-bold text-slate-600 focus:outline-none focus:border-blue-500 shadow-sm cursor-pointer">
-          <option value="all">All Details</option>
-          {% for m in team_members %}
-          <option value="{{ m.user.username|lower }}">{{ m.user.get_full_name|default:m.user.username }}</option>
-          {% endfor %}
-        </select>
-        <select id="log-server-filter" onchange="filterLogs()"
-          class="bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-[11px] font-bold text-slate-600 focus:outline-none focus:border-blue-500 shadow-sm cursor-pointer">
-          <option value="all">All Servers</option>
-          {% for s in servers %}
-          <option value="{{ s.name|lower }}">{{ s.name }}</option>
-          {% endfor %}
-        </select>
-      </div>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left">
-        <thead>
-          <tr class="bg-slate-50/50 border-b border-slate-100">
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date / Time</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Engineer</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Server Node</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Task Details</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Outcome</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-50">
-          {% for log in all_logs %}
-          <tr class="log-row text-[13px] hover:bg-slate-50/50 transition-colors"
-            data-server="{{ log.server.name|lower|default:'general' }}" data-user="{{ log.developer.username|lower }}">
-            <td class="px-6 py-4 text-slate-500 whitespace-nowrap font-medium">
-              {{ log.logged_at|date:"M d" }} <span class="text-slate-300 mx-1">·</span> {{ log.logged_at|time:"H:i" }}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="flex items-center gap-2.5">
-                <div class="w-5 h-5 rounded flex items-center justify-center text-white text-[9px] font-bold"
-                  style="background: {{ log.developer.developer.avatar_gradient|default:'#64748b' }}">
-                  {{ log.developer.developer.initials|default:log.developer.username|slice:":2"|upper }}
-                </div>
-                <span class="font-bold text-slate-700">{{ log.developer.get_full_name|default:log.developer.username }}</span>
-              </div>
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <div class="font-bold text-slate-700">{{ log.server.name|default:"General" }}</div>
-              {% if log.server.ip %}
-              <div class="text-[10px] text-slate-400 font-mono mt-0.5">{{ log.server.ip }}</div>
-              {% endif %}
-            </td>
-            <td class="px-6 py-4 min-w-[250px]">
-              <div class="text-slate-800 font-semibold">{{ log.task_text }}</div>
-              {% if log.notes %}
-              <div class="text-[11px] text-slate-400 mt-0.5 italic truncate max-w-[200px]" title="{{ log.notes }}">{{ log.notes }}</div>
-              {% endif %}
-            </td>
-            <td class="px-6 py-4 whitespace-nowrap">
-              <span class="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md
-                {% if log.status == 'done' %}bg-emerald-50 text-emerald-600
-                {% elif log.status == 'blk' %}bg-rose-50 text-rose-600
-                {% else %}bg-blue-50 text-blue-600{% endif %}">
-                {{ log.status }}
-              </span>
-            </td>
-          </tr>
-          {% empty %}
-          <tr>
-            <td colspan="5" class="px-6 py-8 text-center text-slate-400 text-sm font-medium">
-              No activity logs recorded yet.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
 
 <!-- QUICK LOG MODAL (Server Command Center) -->
 <div id="ql-modal"
@@ -698,6 +610,61 @@
   </div>
 </div>
 
+<!-- REASSIGN SERVER MODAL -->
+<div id="reassign-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+  <div class="bg-white rounded-3xl w-full max-w-md relative z-10 shadow-2xl border border-slate-100 overflow-hidden">
+    <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+          <i class="fa-solid fa-user-gear text-lg"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Reassign Owner</h3>
+          <p class="text-[11px] text-slate-500">Transfer ownership of <span id="reassign-server-name"
+              class="font-bold text-slate-700"></span></p>
+        </div>
+      </div>
+      <button onclick="closeReassignModal()"
+        class="w-8 h-8 rounded-xl hover:bg-white hover:shadow-md flex items-center justify-center text-slate-400 transition-all">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+
+    <div class="p-6 space-y-4">
+      <input type="hidden" id="reassign-server-id">
+      <div>
+        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Select New
+          Owner</label>
+        <select id="reassign-owner"
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 font-medium transition-all">
+          <option value="{{ request.user.id }}">Myself (@{{ request.user.username }})</option>
+          {% for member in team_members %}
+          {% if member.user.id != request.user.id %}
+          <option value="{{ member.user.id }}">{{ member.user.get_full_name|default:member.user.username }} (@{{
+            member.user.username }})</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+
+      <div id="reassign-error"
+        class="hidden p-3 rounded-xl bg-rose-50 border border-rose-100 flex items-center gap-2.5 text-rose-600 text-xs font-medium">
+        <i class="fa-solid fa-circle-exclamation text-rose-400"></i>
+        <span id="reassign-error-msg"></span>
+      </div>
+    </div>
+
+    <div class="p-6 bg-slate-50/80 border-t border-slate-100 flex gap-3">
+      <button onclick="closeReassignModal()"
+        class="flex-1 py-2.5 text-[12px] font-bold text-slate-500 hover:text-slate-700 transition-colors">Cancel</button>
+      <button onclick="submitReassign()"
+        class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-[12px] font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95">Transfer
+        Ownership</button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}
@@ -708,14 +675,14 @@
   // Section Switching Logic
   function showSection(name) {
     document.querySelectorAll('.page-section').forEach(s => s.classList.add('hidden'));
-    document.getElementById('page-' + name).classList.remove('hidden');
+    const target = document.getElementById('page-' + name);
+    if (!target) return;
+    target.classList.remove('hidden');
 
     // Update Sidebar Active State
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-    // Find the link that matches
-    const links = document.querySelectorAll('.nav-link');
-    links.forEach(l => {
-      if (l.getAttribute('href').includes('#' + name)) l.classList.add('active');
+    document.querySelectorAll('.nav-link').forEach(l => {
+      if (l.getAttribute('href') && l.getAttribute('href').includes('#' + name)) l.classList.add('active');
       if (name === 'dash' && l.getAttribute('href') === '{% url "dashboard" %}') l.classList.add('active');
     });
 
@@ -727,15 +694,30 @@
     // Handle hash in URL without reload
     window.history.pushState(null, null, name === 'dash' ? '{% url "dashboard" %}' : '#' + name);
   }
+  // Expose globally so base.html sidebar onclick can always reach it
+  window.showSection = showSection;
 
-  // Handle URL Hash on load
-  window.addEventListener('load', () => {
+  // ── Handle URL hash immediately (runs after showSection is defined) ──
+  (function() {
     const hash = window.location.hash.replace('#', '');
     if (hash && document.getElementById('page-' + hash)) {
       showSection(hash);
     }
-  });
+  })();
 
+  // ── Intercept nav-link clicks when already on the dashboard ──
+  document.querySelectorAll('.nav-link').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      var href = link.getAttribute('href') || '';
+      if (href.includes('#')) {
+        var section = href.split('#')[1];
+        if (section && document.getElementById('page-' + section)) {
+          e.preventDefault();
+          showSection(section);
+        }
+      }
+    });
+  });
 
 
   async function updateTaskStatus(taskId, status) {
@@ -942,100 +924,12 @@
 
   // ── CHARTS ────────────────────────────────────────────────────
   function initCharts() {
-    const serverNames = [{% for s in servers %}"{{ s.name }}",{% endfor %}];
-    const dailyData = [{% for s in servers %}{{ s.daily_pct }},{% endfor %}];
-    const weeklyData = [{% for s in servers %}{{ s.weekly_pct }},{% endfor %}];
-    const monthlyData = [{% for s in servers %}{{ s.monthly_pct }},{% endfor %}];
-
-  // 1. Compliance Wheel (Doughnut)
-  const ctxC = document.getElementById('complianceChart').getContext('2d');
-  new Chart(ctxC, {
-    type: 'doughnut',
-    data: {
-      labels: ['Fully Verified', 'In Progress', 'Pending'],
-      datasets: [{
-        data: [{{ compliance.full }}, {{ compliance.partial }}, {{ compliance.none }}],
-    backgroundColor: ['#10b981', '#3b82f6', '#e2e8f0'],
-    borderWidth: 0,
-    cutout: '82%',
-    spacing: 4
-        }]
-      },
-    options: {
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        backgroundColor: '#1e293b',
-        titleFont: { size: 12 },
-        bodyFont: { size: 12 },
-        padding: 10,
-        cornerRadius: 8,
-        displayColors: false
-      }
-    },
-    maintainAspectRatio: false,
-    animation: { duration: 1800, easing: 'easeOutQuart' }
+    const serverNames = [{% for s in servers %} "{{ s.name }}", {% endfor %}];
+    const dailyData = [{% for s in servers %}{{ s.daily_pct }}, {% endfor %}];
+    const weeklyData = [{% for s in servers %}{{ s.weekly_pct }}, {% endfor %}];
+    const monthlyData = [{% for s in servers %}{{ s.monthly_pct }}, {% endfor %}];
   }
-    });
 
-  // 2. Performance Matrix (Grouped Bar)
-  const ctxM = document.getElementById('matrixChart').getContext('2d');
-  new Chart(ctxM, {
-    type: 'bar',
-    data: {
-      labels: serverNames,
-      datasets: [
-        {
-          label: 'Daily',
-          data: dailyData,
-          backgroundColor: 'rgba(59, 130, 246, 0.8)',
-          borderRadius: 6,
-          barThickness: 20
-        },
-        {
-          label: 'Weekly',
-          data: weeklyData,
-          backgroundColor: 'rgba(16, 185, 129, 0.8)',
-          borderRadius: 6,
-          barThickness: 20
-        },
-        {
-          label: 'Monthly',
-          data: monthlyData,
-          backgroundColor: 'rgba(245, 158, 11, 0.8)',
-          borderRadius: 6,
-          barThickness: 20
-        }
-      ]
-    },
-    options: {
-      indexAxis: 'y',
-      maintainAspectRatio: false,
-      plugins: {
-        legend: { display: false },
-        tooltip: {
-          backgroundColor: '#1e293b',
-          padding: 12,
-          cornerRadius: 8,
-          callbacks: { label: c => ` ${c.dataset.label}: ${c.raw}%` }
-        }
-      },
-      scales: {
-        x: {
-          beginAtZero: true,
-          max: 100,
-          grid: { color: '#f1f5f9', drawBorder: false },
-          ticks: { font: { size: 10, weight: '600' }, color: '#94a3b8', callback: v => v + '%' }
-        },
-        y: {
-          grid: { display: false, drawBorder: false },
-          ticks: { font: { size: 11, weight: '700' }, color: '#475569' }
-        }
-      },
-      animation: { duration: 1400, easing: 'easeOutQuart' }
-    }
-  });
-  }
 
   document.addEventListener('DOMContentLoaded', () => {
     initCharts();
@@ -1138,10 +1032,8 @@
     });
   }
 
-  function viewUserDetails(username) {
-    document.getElementById('log-user-filter').value = username;
-    filterLogs();
-    showSection('log');
+  function viewUserDetails(userId) {
+    window.location.href = `{% url 'task_log_filter' %}?developer_id=${userId}`;
   }
 
   function filterByStatus(status) {
@@ -1243,9 +1135,42 @@
     }
   }
 
+  // ── REASSIGN SERVER ──────────────────────────────────────────
+  function openReassignModal(serverId, serverName) {
+    document.getElementById('reassign-server-id').value = serverId;
+    document.getElementById('reassign-server-name').textContent = serverName;
+    document.getElementById('reassign-error').classList.add('hidden');
+    document.getElementById('reassign-modal').classList.remove('hidden');
+  }
+
+  function closeReassignModal() {
+    document.getElementById('reassign-modal').classList.add('hidden');
+  }
+
+  async function submitReassign() {
+    const serverId = document.getElementById('reassign-server-id').value;
+    const ownerId = document.getElementById('reassign-owner').value;
+
+    const resp = await fetch(`/api/server/${serverId}/reassign/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ owner_id: ownerId })
+    });
+
+    const data = await resp.json();
+    if (data.success) {
+      toast('🔄 Server ownership transferred!');
+      closeReassignModal();
+      setTimeout(() => location.reload(), 800);
+    } else {
+      document.getElementById('reassign-error-msg').textContent = data.error || 'Failed to reassign server.';
+      document.getElementById('reassign-error').classList.remove('hidden');
+    }
+  }
+
   // Close modal on backdrop click
-  document.getElementById('add-server-modal').addEventListener('click', function (e) {
-    if (e.target === this) closeAddServerModal();
+  document.getElementById('reassign-modal').addEventListener('click', function (e) {
+    if (e.target === this) closeReassignModal();
   });
 
 </script>
