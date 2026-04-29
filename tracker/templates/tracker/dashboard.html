@@ -147,9 +147,14 @@
         </div>
         <div class="p-5">
           <!-- PROGRESS BAR (DAILY) -->
-          <div class="pbar h-1 mb-4 bg-slate-100">
-            <div class="pfill {% if server.daily_pct == 100 %}bg-emerald-500{% else %}bg-blue-600{% endif %}"
-              style="width: {{ server.daily_pct }}%"></div>
+          <div class="flex items-center justify-between mb-4 gap-3">
+            <div class="pbar flex-1 bg-slate-100">
+              <div class="pfill {% if server.daily_pct == 100 %}bg-emerald-500{% else %}bg-blue-600{% endif %}"
+                style="width: {{ server.daily_pct }}%"></div>
+            </div>
+            <span class="text-[11px] font-bold {% if server.daily_pct == 100 %}text-emerald-600{% elif server.daily_pct > 0 %}text-blue-600{% else %}text-slate-400{% endif %}">
+              {{ server.daily_pct }}%
+            </span>
           </div>
 
           <!-- 7-DAY HISTORY MATRIX -->

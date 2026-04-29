@@ -1,18 +1,25 @@
-*.py[cod]
+# Dependencies
+node_modules/
+package-lock.json
+
+# Python
 __pycache__/
-*.so
-.Python
-env/
+*.py[cod]
+*$py.class
 venv/
 ENV/
-build/
-dist/
-*.sqlite3
-.db
-local_settings.py
-db.sqlite3
-.DS_Store
 .env
-.idea/
+
+# Database
+db.sqlite3
+db.sqlite3-journal
+
+# IDEs
 .vscode/
-*.log
+.idea/
+
+# Scratch files
+reseed.py
+seed_custom_data.py
+reseed_pro.py
+reseed_pro_v2.py

@@ -235,9 +235,9 @@ def dashboard(request):
             'ip': s.ip_address,
             'status': s.status,
             'last_checked': s.last_checked,
-            'daily_pct':   round(s_done_d / d_total * 100) if d_total else 0,
-            'weekly_pct':  round(s_done_w / w_total * 100) if w_total else 0,
-            'monthly_pct': round(s_done_m / m_total * 100) if m_total else 0,
+            'daily_pct':   min(100, round(s_done_d / d_total * 100)) if d_total else 0,
+            'weekly_pct':  min(100, round(s_done_w / w_total * 100)) if w_total else 0,
+            'monthly_pct': min(100, round(s_done_m / m_total * 100)) if m_total else 0,
             'daily_done':   s_done_d,
             'daily_total':  d_total,
             'weekly_done':  s_done_w,
@@ -254,7 +254,7 @@ def dashboard(request):
                 server=s, category='d',
                 logged_at__date=day_target, status='done'
             ).values('task_id').distinct().count()
-            day_pct = round(day_done / d_total * 100) if d_total else 0
+            day_pct = min(100, round(day_done / d_total * 100)) if d_total else 0
             server_list[-1]['history_7d'].append({
                 'day': day_target.strftime('%a'),
                 'pct': day_pct,
@@ -266,20 +266,31 @@ def dashboard(request):
     team_members = []
     all_users = User.objects.filter(is_active=True).select_related('developer')
     for u in all_users:
-        u_today_done = TaskLog.objects.filter(developer=u, category='d', logged_at__date=today, status='done').count()
         u_server_count = Server.objects.filter(owner=u).count()
-        u_total_daily = len(task_data['d']) * u_server_count
-        u_pct = round(u_today_done / u_total_daily * 100) if u_total_daily else 0
-        if u_pct > 100: u_pct = 100
+        # Use distinct (server, task_id) count — same formula as the hero section
+        u_today_done = TaskLog.objects.filter(
+            developer=u, category='d', logged_at__date=today, status='done',
+            server__isnull=False
+        ).values('server', 'task_id').distinct().count()
         
+        # Check if they have any blocked tasks today
+        has_blocked = TaskLog.objects.filter(
+            developer=u, logged_at__date=today, status='blk'
+        ).exists()
+
+        u_total_daily = len(task_data['d']) * u_server_count
+        u_pct = min(100, round(u_today_done / u_total_daily * 100)) if u_total_daily else 0
+        if u_pct > 100: u_pct = 100
+
         team_members.append({
             'user': u,
             'initials': u.developer.initials if hasattr(u, 'developer') else u.username[:2].upper(),
             'role': u.developer.role if hasattr(u, 'developer') else 'Member',
             'gradient': u.developer.avatar_gradient if hasattr(u, 'developer') else 'linear-gradient(135deg,#64748b,#475569)',
             'daily_pct': u_pct,
-            'server_count': Server.objects.filter(owner=u).count(),
-            'weekly_pct': 0, 
+            'server_count': u_server_count,
+            'has_blocked': has_blocked,
+            'weekly_pct': 0,
         })
 
     # --- NEW PRACTICAL LOGIC ---
@@ -317,7 +328,7 @@ def dashboard(request):
         else:
             break
     
-    daily_pct = round(done_today_count / total_needed_today * 100) if total_needed_today else 0
+    daily_pct = min(100, round(done_today_count / total_needed_today * 100)) if total_needed_today else 0
     
     # --- COMPLIANCE BUCKETS FOR CIRCLE GRAPH ---
     compliance = {'full': 0, 'partial': 0, 'none': 0}
@@ -338,11 +349,12 @@ def dashboard(request):
     hour = timezone.localtime(timezone.now()).hour
     greeting = 'Morning' if hour < 12 else ('Afternoon' if hour < 17 else 'Evening')
 
-    # --- TEAM STATS AGGREGATION (Only include active members with servers) ---
+    # --- TEAM STATS AGGREGATION ---
     active_members = [m for m in team_members if m['server_count'] > 0]
-    team_avg = round(sum(m['daily_pct'] for m in active_members) / len(active_members)) if active_members else 100
+    team_avg = round(sum(m['daily_pct'] for m in active_members) / len(active_members)) if active_members else 0
     full_comp = sum(1 for m in active_members if m['daily_pct'] == 100)
-    needs_attn = sum(1 for m in active_members if m['daily_pct'] < 50)
+    # Change "Needs Attention" to specifically count users with BLOCKED tasks (more meaningful than just 0% progress)
+    needs_attn = sum(1 for m in team_members if m['has_blocked'])
 
     context = {
         'task_data': task_data,
@@ -360,7 +372,7 @@ def dashboard(request):
         'compliance': compliance,
         'recent_logs': recent_logs,
         'all_logs': all_logs,
-        'team_members': team_members,
+        'team_members': team_members,  # Show all members as requested
         'team_avg': team_avg,
         'full_comp': full_comp,
         'needs_attn': needs_attn,
@@ -419,6 +431,58 @@ def log_task(request):
             'remarks': notes
         }
     )
+
+    # Automatically map 'd01' (Monitor Server Health) JSON fields to the ServerHealthEntry model
+    # so the charts and KPI widgets get updated dynamically!
+    if task_id == 'd01' and server:
+        try:
+            from .models import ServerHealthEntry
+            # Safe parsing function
+            def parse_float(val):
+                try:
+                    return float(str(val).strip('%').strip())
+                except (ValueError, TypeError):
+                    return 0.0
+
+            cpu = parse_float(fields_data.get('cpu_usage', 0))
+            mem = parse_float(fields_data.get('memory_usage', 0))
+            disk = parse_float(fields_data.get('disk_usage', 0))
+            net = parse_float(fields_data.get('network_utilization', 0))
+            
+            # Map dynamic status dropdown
+            raw_status = str(fields_data.get('status', 'Normal')).lower()
+            health_status = 'normal'
+            if 'critical' in raw_status: health_status = 'critical'
+            elif 'warning' in raw_status: health_status = 'warning'
+
+            issue_found = str(fields_data.get('issue_found', 'No')).lower() == 'yes'
+            
+            action_taken = fields_data.get('action_taken', '')
+            remarks = fields_data.get('remarks', notes)
+
+            ServerHealthEntry.objects.update_or_create(
+                server_name=server.name,
+                date=today,
+                defaults={
+                    'developer': request.user,
+                    'cpu_usage': cpu,
+                    'memory_usage': mem,
+                    'disk_usage': disk,
+                    'network_utilization': net,
+                    'status': health_status,
+                    'issue_found': issue_found,
+                    'action_taken': action_taken,
+                    'remarks': remarks
+                }
+            )
+
+            # Update the main Server object status and last_checked time!
+            server.status = health_status if health_status != 'normal' else 'up'
+            server.last_checked = timezone.now()
+            server.save()
+
+        except Exception as e:
+            print(f"Error syncing ServerHealthEntry: {e}")
 
     return JsonResponse({'success': True})
 
@@ -495,18 +559,60 @@ def server_management(request, server_id):
     # Show logs for this server today (either by owner or current user)
     # If manager is viewing, show the owner's progress or the server's general progress
     today_logs = TaskLog.objects.filter(server=server, logged_at__date=today)
-    logged_ids = {log.task_id: log.status for log in today_logs}
     
-    # Last 7 days compliance for widgets
+    # Show logs for this server
+    # Daily: only today
+    # Weekly: current week
+    # Monthly: current month
+    start_of_week = today - timezone.timedelta(days=today.weekday() + 1) if today.weekday() != 6 else today
+    start_of_month = today.replace(day=1)
+    
+    period_logs = TaskLog.objects.filter(
+        server=server,
+        logged_at__date__gte=start_of_month
+    )
+    
+    # Create a mapping of task_id to its completion data (status + fields)
+    logged_data = {}
+    for log in period_logs:
+        # Check if the log falls within its relevant category window
+        is_valid = False
+        if log.category == 'd' and log.logged_at.date() == today:
+            is_valid = True
+        elif log.category == 'w' and log.logged_at.date() >= start_of_week:
+            is_valid = True
+        elif log.category == 'm' and log.logged_at.date() >= start_of_month:
+            is_valid = True
+            
+        if is_valid:
+            # For duplicates in the period, keep the latest one
+            if log.task_id not in logged_data or log.logged_at > logged_data[log.task_id]['logged_at']:
+                entry = GeneralTaskEntry.objects.filter(server=server, task_id=log.task_id, date=log.logged_at.date()).first()
+                logged_data[log.task_id] = {
+                    'status': log.status,
+                    'fields': entry.fields_data if entry else {},
+                    'logged_at': log.logged_at
+                }
+    
+    # Last 7 days compliance for widgets (remains day-by-day)
     compliance_7d = []
-    daily_count = len(task_data['d'])
+    daily_tasks = TaskDefinition.objects.filter(category='d', is_active=True)
+    daily_count = daily_tasks.count()
+    
     for i in range(6, -1, -1):
         day = today - timezone.timedelta(days=i)
-        logs = TaskLog.objects.filter(server=server, logged_at__date=day, category='d', status='done').count()
-        pct = (logs / daily_count * 100) if daily_count > 0 else 0
+        # Count unique tasks completed for this server on this day
+        done_count = TaskLog.objects.filter(
+            server=server, 
+            logged_at__date=day, 
+            category='d', 
+            status='done'
+        ).values('task_id').distinct().count()
+        
+        pct = (done_count / daily_count * 100) if daily_count > 0 else 0
         compliance_7d.append({
             'label': day.strftime('%a')[0],
-            'pct': round(pct),
+            'pct': min(100, round(pct)), # Cap at 100% for safety
             'is_today': i == 0
         })
 
@@ -516,7 +622,8 @@ def server_management(request, server_id):
         'server': server,
         'task_data': task_data,
         'task_data_json': json.dumps(task_data),
-        'logged_ids': logged_ids,
+        'logged_data': logged_data,
+        'logged_ids': {tid: d['status'] for tid, d in logged_data.items()},
         'history': history,
         'today': today,
         'compliance_7d': compliance_7d,
@@ -1160,9 +1267,30 @@ def server_details(request, server_id):
     task_counts = {}
     for cat, label in [('d', 'Daily'), ('w', 'Weekly'), ('m', 'Monthly')]:
         total = TaskDefinition.objects.filter(category=cat, is_active=True).count()
-        done = TaskLog.objects.filter(server=server, category=cat, status='done', logged_at__date=today).count()
-        task_counts[cat] = {'label': label, 'done': done, 'total': total,
-                             'pct': round(done / total * 100) if total else 0}
+        
+        # Determine the time window for this category
+        if cat == 'd':
+            # Daily: only today
+            start_date = today
+        elif cat == 'w':
+            # Weekly: current week (Sunday to now)
+            start_date = today - datetime.timedelta(days=today.weekday() + 1) if today.weekday() != 6 else today
+        else:
+            # Monthly: current month
+            start_date = today.replace(day=1)
+            
+        done = TaskLog.objects.filter(
+            server=server, 
+            category=cat, 
+            status='done', 
+            logged_at__date__gte=start_date,
+            logged_at__date__lte=today
+        ).values('task_id').distinct().count()
+        
+        task_counts[cat] = {
+            'label': label, 'done': done, 'total': total,
+            'pct': min(100, round(done / total * 100)) if total else 0
+        }
 
     # ── Before vs Now: last two entries per task ────────────────────
     all_entries = list(
@@ -1228,16 +1356,19 @@ def server_details(request, server_id):
 
     # ── 7-day completion history for bar chart ──────────────────────
     completion_7d = []
+    daily_def_count = TaskDefinition.objects.filter(category='d', is_active=True).count()
+    
     for i in range(6, -1, -1):
         day = today - datetime.timedelta(days=i)
-        d_done = TaskLog.objects.filter(server=server, logged_at__date=day, status='done').count()
-        d_total = TaskLog.objects.filter(server=server, logged_at__date=day).count()
+        # Use distinct task_id to prevent percentages > 100%
+        d_done = TaskLog.objects.filter(server=server, logged_at__date=day, status='done').values('task_id').distinct().count()
+        
         completion_7d.append({
             'day': day.strftime('%a'),
             'date': day.strftime('%d %b'),
             'done': d_done,
-            'total': d_total,
-            'pct': round(d_done / d_total * 100) if d_total else 0,
+            'total': daily_def_count,
+            'pct': min(100, round(d_done / daily_def_count * 100)) if daily_def_count else 0,
             'is_today': (i == 0),
         })
 
