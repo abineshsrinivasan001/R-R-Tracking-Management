@@ -33,4 +33,5 @@ urlpatterns = [
 
     # ── Log Filter ───────────────────────────────────────────────
     path('logs/', views.task_log_filter, name='task_log_filter'),
+    path('api/log-details/<int:log_id>/', views.get_log_details, name='get_log_details'),
 ]

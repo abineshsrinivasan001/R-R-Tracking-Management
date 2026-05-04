@@ -161,6 +161,48 @@ def task_log_filter(request):
 
 
 @login_required
+def get_log_details(request, log_id):
+    """AJAX endpoint: returns the full details (telemetry) for a specific log entry."""
+    user = request.user
+    if user.is_superuser or user.is_staff:
+        viewer_role = 'manager'
+    else:
+        viewer_role = user.developer.role if hasattr(user, 'developer') else 'developer'
+
+    log = get_object_or_404(TaskLog, id=log_id)
+    
+    # Access check: Managers/TLs see all; developers see only their own or their owned server's logs
+    if viewer_role not in ('manager', 'tl'):
+        if log.developer != user and log.server and log.server.owner != user:
+            return JsonResponse({'error': 'Unauthorized'}, status=403)
+
+    # Find the GeneralTaskEntry for this specific submission
+    # We use date, server, task_id, and developer to match
+    entry = GeneralTaskEntry.objects.filter(
+        server=log.server,
+        task_id=log.task_id,
+        date=log.logged_at.date(),
+        developer=log.developer
+    ).order_by('-created_at').first()
+
+    return JsonResponse({
+        'id': log.id,
+        'task_id': log.task_id,
+        'task_text': log.task_text,
+        'developer': log.developer.get_full_name() or log.developer.username,
+        'server': log.server.name if log.server else 'N/A',
+        'logged_at': log.logged_at.strftime('%d %b %Y %H:%M'),
+        'status': log.get_status_display(),
+        'notes': log.notes,
+        'observations': log.observations,
+        'action_taken': log.action_taken,
+        'outcome': log.outcome,
+        'fields_data': entry.fields_data if entry else {},
+        'remarks': entry.remarks if entry else ''
+    })
+
+
+@login_required
 def dashboard(request):
     user = request.user
     today = timezone.now().date()
@@ -264,22 +306,33 @@ def dashboard(request):
 
     # Team stats with real data
     team_members = []
+    total_system_daily_needed = len(task_data['d']) * Server.objects.count()
     all_users = User.objects.filter(is_active=True).select_related('developer')
     for u in all_users:
         u_server_count = Server.objects.filter(owner=u).count()
-        # Use distinct (server, task_id) count — same formula as the hero section
+        
+        # 1. Performance: Count tasks this person ACTUALLY performed today
         u_today_done = TaskLog.objects.filter(
             developer=u, category='d', logged_at__date=today, status='done',
             server__isnull=False
         ).values('server', 'task_id').distinct().count()
         
-        # Check if they have any blocked tasks today
+        # 2. Target Goal:
+        # If they own nodes, their goal is their nodes.
+        # If they are a Manager with 0 nodes, their goal is the System Total (to show their contribution).
+        if u_server_count > 0:
+            u_total_daily = len(task_data['d']) * u_server_count
+        else:
+            # For Admins/Managers helping out, show progress against the whole fleet
+            u_total_daily = total_system_daily_needed
+
+        u_pct = min(100, round(u_today_done / u_total_daily * 100)) if u_total_daily else 0
+        
+        # Check if any tasks for servers they OWN are blocked
         has_blocked = TaskLog.objects.filter(
-            developer=u, logged_at__date=today, status='blk'
+            server__owner=u, logged_at__date=today, status='blk'
         ).exists()
 
-        u_total_daily = len(task_data['d']) * u_server_count
-        u_pct = min(100, round(u_today_done / u_total_daily * 100)) if u_total_daily else 0
         if u_pct > 100: u_pct = 100
 
         team_members.append({
@@ -542,16 +595,15 @@ def get_task_details(request):
 
 @login_required
 def server_management(request, server_id):
-    viewer_role = request.user.developer.role if hasattr(request.user, 'developer') else 'developer'
-    
+    if request.user.is_superuser or request.user.is_staff:
+        viewer_role = 'manager'
+    else:
+        viewer_role = request.user.developer.role if hasattr(request.user, 'developer') else 'developer'
+        
     if viewer_role in ['manager', 'tl']:
         server = get_object_or_404(Server, id=server_id)
     else:
-        # Role-based check
-        if request.user.developer.role in ['manager', 'tl']:
-            server = get_object_or_404(Server, id=server_id)
-        else:
-            server = get_object_or_404(Server, id=server_id, owner=request.user)
+        server = get_object_or_404(Server, id=server_id, owner=request.user)
         
     today = timezone.now().date()
     task_data = get_dynamic_tasks()
@@ -591,7 +643,7 @@ def server_management(request, server_id):
                 logged_data[log.task_id] = {
                     'status': log.status,
                     'fields': entry.fields_data if entry else {},
-                    'logged_at': log.logged_at
+                    'logged_at': log.logged_at.isoformat()
                 }
     
     # Last 7 days compliance for widgets (remains day-by-day)
@@ -774,7 +826,10 @@ def create_server(request):
     # Owner logic: Managers/TLs can assign to others; Developers only to themselves.
     owner = request.user
     owner_id = data.get('owner_id')
-    viewer_role = request.user.developer.role if hasattr(request.user, 'developer') else 'developer'
+    if request.user.is_superuser or request.user.is_staff:
+        viewer_role = 'manager'
+    else:
+        viewer_role = request.user.developer.role if hasattr(request.user, 'developer') else 'developer'
 
     if owner_id and viewer_role in ['manager', 'tl']:
         try:
@@ -801,7 +856,11 @@ def reassign_server(request, server_id):
         return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
     
     # Security: Only managers and TLs can reassign servers
-    viewer_role = request.user.developer.role if hasattr(request.user, 'developer') else 'developer'
+    if request.user.is_superuser or request.user.is_staff:
+        viewer_role = 'manager'
+    else:
+        viewer_role = request.user.developer.role if hasattr(request.user, 'developer') else 'developer'
+        
     if viewer_role not in ('manager', 'tl'):
         return JsonResponse({'success': False, 'error': 'Permission denied.'}, status=403)
         
@@ -844,7 +903,12 @@ def api_stats(request):
 def server_logs_api(request, server_id):
     """AJAX endpoint: returns recent task logs for a specific server as JSON."""
     # Role-based check
-    if request.user.developer.role in ['manager', 'tl']:
+    if request.user.is_superuser or request.user.is_staff:
+        viewer_role = 'manager'
+    else:
+        viewer_role = request.user.developer.role if hasattr(request.user, 'developer') else 'developer'
+        
+    if viewer_role in ['manager', 'tl']:
         server = get_object_or_404(Server, id=server_id)
     else:
         server = get_object_or_404(Server, id=server_id, owner=request.user)
@@ -869,7 +933,12 @@ def server_logs_api(request, server_id):
 def server_chart_api(request, server_id):
     """AJAX endpoint: returns D/W/M completion % for a specific server for individual charts."""
     # Role-based check
-    if request.user.developer.role in ['manager', 'tl']:
+    if request.user.is_superuser or request.user.is_staff:
+        viewer_role = 'manager'
+    else:
+        viewer_role = request.user.developer.role if hasattr(request.user, 'developer') else 'developer'
+        
+    if viewer_role in ['manager', 'tl']:
         server = get_object_or_404(Server, id=server_id)
     else:
         server = get_object_or_404(Server, id=server_id, owner=request.user)
@@ -1024,7 +1093,10 @@ def manager_dashboard(request):
 @tl_or_manager_required
 def user_management(request):
     """Create and list users. TL can only create developers; Manager can create TLs too."""
-    viewer_role = request.user.developer.role if hasattr(request.user, 'developer') else 'developer'
+    if request.user.is_superuser or request.user.is_staff:
+        viewer_role = 'manager'
+    else:
+        viewer_role = request.user.developer.role if hasattr(request.user, 'developer') else 'developer'
 
     if request.method == 'POST':
         action = request.POST.get('action')
@@ -1376,6 +1448,32 @@ def server_details(request, server_id):
     first_log = TaskLog.objects.filter(server=server).order_by('logged_at').first()
     server_since = first_log.logged_at.date() if first_log else today
 
+    # ── Detailed History: Group entries by category and date ──────────
+    all_history_entries = GeneralTaskEntry.objects.filter(server=server).order_by('-date', 'task_id').select_related('developer')
+    
+    history_by_cat = {
+        'd': {}, 'w': {}, 'm': {}
+    }
+    
+    for entry in all_history_entries:
+        cat = entry.task_id[0]
+        if cat not in history_by_cat: continue
+        
+        dt_str = entry.date.strftime('%Y-%m-%d')
+        if dt_str not in history_by_cat[cat]:
+            history_by_cat[cat][dt_str] = {
+                'date': entry.date,
+                'entries': []
+            }
+        history_by_cat[cat][dt_str]['entries'].append(entry)
+    
+    # Sort dates descending for each category
+    sorted_history_cat = {
+        'd': sorted(history_by_cat['d'].values(), key=lambda x: x['date'], reverse=True),
+        'w': sorted(history_by_cat['w'].values(), key=lambda x: x['date'], reverse=True),
+        'm': sorted(history_by_cat['m'].values(), key=lambda x: x['date'], reverse=True),
+    }
+
     context = {
         'server': server,
         'viewer_role': viewer_role,
@@ -1405,6 +1503,7 @@ def server_details(request, server_id):
         'resolved_alerts': resolved_alerts,
         # Logs & meta
         'recent_logs': recent_logs,
+        'history_cat': sorted_history_cat,
         'server_since': server_since,
     }
     return render(request, 'tracker/server_details.html', context)

@@ -12,6 +12,8 @@ from django.contrib import messages
 
 def _get_role(user):
     """Safely returns the Developer.role string or None."""
+    if user.is_superuser or user.is_staff:
+        return 'manager'
     try:
         return user.developer.role
     except Exception:

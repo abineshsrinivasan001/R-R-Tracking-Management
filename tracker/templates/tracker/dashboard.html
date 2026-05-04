@@ -128,20 +128,17 @@
           </div>
           {% if viewer_role == 'manager' or viewer_role == 'tl' %}
           <div class="flex items-center gap-1.5">
-            <button onclick="openReassignModal('{{ server.id }}', '{{ server.name }}')"
+            <button onclick="openReassignModal('{{ server.id }}', '{{ server.name }}', '{{ server.owner.id }}')"
               class="text-slate-400 hover:text-blue-500 transition-colors p-1 rounded-lg hover:bg-blue-50"
               title="Reassign Owner">
               <i class="fa-solid fa-user-gear text-xs"></i>
             </button>
-            <form method="post" action="{% url 'delete_server' server.id %}"
-              onsubmit="return confirm('Remove ' + '{{ server.name }}' + '? This cannot be undone.')">
-              {% csrf_token %}
-              <button type="submit"
-                class="text-slate-400 hover:text-rose-500 transition-colors p-1 rounded-lg hover:bg-rose-50"
-                title="Remove Server">
-                <i class="fa-solid fa-trash-can text-xs"></i>
-              </button>
-            </form>
+            <button type="button"
+              onclick="confirmDeleteServer('{{ server.id }}', '{{ server.name }}')"
+              class="text-slate-400 hover:text-rose-500 transition-colors p-1 rounded-lg hover:bg-rose-50"
+              title="Remove Server">
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
           </div>
           {% endif %}
         </div>
@@ -250,6 +247,11 @@
       </div>
     </div>
   </div>
+
+  <!-- Hidden shared delete form — keeps <form> out of flex card headers -->
+  <form id="delete-server-form" method="post" action="" style="display:none">
+    {% csrf_token %}
+  </form>
 
 
 
@@ -589,8 +591,7 @@
           <option value="{{ request.user.id }}">Myself (@{{ request.user.username }})</option>
           {% for member in team_members %}
           {% if member.user.id != request.user.id %}
-          <option value="{{ member.user.id }}">{{ member.user.get_full_name|default:member.user.username }} (@{{
-            member.user.username }})</option>
+          <option value="{{ member.user.id }}">{{ member.user.get_full_name|default:member.user.username }} (@{{ member.user.username }})</option>
           {% endif %}
           {% endfor %}
         </select>
@@ -646,8 +647,7 @@
           <option value="{{ request.user.id }}">Myself (@{{ request.user.username }})</option>
           {% for member in team_members %}
           {% if member.user.id != request.user.id %}
-          <option value="{{ member.user.id }}">{{ member.user.get_full_name|default:member.user.username }} (@{{
-            member.user.username }})</option>
+          <option value="{{ member.user.id }}">{{ member.user.get_full_name|default:member.user.username }} (@{{ member.user.username }})</option>
           {% endif %}
           {% endfor %}
         </select>
@@ -676,6 +676,14 @@
 <script>
   const TASKS = {{ task_data_json| safe }};
   let currentModalStatus = 'done';
+
+  // Delete server — uses a single hidden form so no <form> lives inside flex card headers
+  function confirmDeleteServer(serverId, serverName) {
+    if (!confirm('Remove ' + serverName + '? This cannot be undone.')) return;
+    const form = document.getElementById('delete-server-form');
+    form.action = '/server/' + serverId + '/delete/';
+    form.submit();
+  }
 
   // Section Switching Logic
   function showSection(name) {
@@ -1141,10 +1149,31 @@
   }
 
   // ── REASSIGN SERVER ──────────────────────────────────────────
-  function openReassignModal(serverId, serverName) {
+  function openReassignModal(serverId, serverName, currentOwnerId) {
     document.getElementById('reassign-server-id').value = serverId;
     document.getElementById('reassign-server-name').textContent = serverName;
     document.getElementById('reassign-error').classList.add('hidden');
+    
+    // Hide the current owner from the dropdown
+    const select = document.getElementById('reassign-owner');
+    let firstVisible = -1;
+    
+    Array.from(select.options).forEach((opt, idx) => {
+      if (opt.value == currentOwnerId) {
+        opt.style.display = 'none';
+        opt.disabled = true;
+      } else {
+        opt.style.display = 'block';
+        opt.disabled = false;
+        if (firstVisible === -1) firstVisible = idx;
+      }
+    });
+
+    // Auto-select the first available person who ISN'T the current owner
+    if (firstVisible !== -1) {
+      select.selectedIndex = firstVisible;
+    }
+
     document.getElementById('reassign-modal').classList.remove('hidden');
   }
 

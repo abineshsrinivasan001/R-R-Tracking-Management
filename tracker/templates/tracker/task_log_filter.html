@@ -245,6 +245,44 @@
     border-radius: 99px;
     font-weight: 700
   }
+
+  /* ── Detail Modal ── */
+  .log-modal {
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 450px;
+    background: #fff;
+    z-index: 1000;
+    box-shadow: -10px 0 30px rgba(0,0,0,0.1);
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+  }
+  .log-modal.open { transform: translateX(0); }
+  .modal-overlay {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.4);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .modal-overlay.open { display: block; opacity: 1; }
+  .mod-header { padding: 24px; border-bottom: 1px solid #f1f5f9; background: #f8fafc; }
+  .mod-body { padding: 24px; overflow-y: auto; flex: 1; }
+  .mod-section { margin-bottom: 24px; }
+  .mod-sec-title { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .mod-val-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; }
+  .mod-val-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e2e8f0; font-size: 11px; }
+  .mod-val-item:last-child { border-bottom: none; }
+  .mod-val-key { color: #64748b; font-weight: 600; }
+  .mod-val-val { color: #0f172a; font-weight: 700; }
+  .mod-text-box { background: #fff; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 12px; font-size: 11px; color: #475569; line-height: 1.6; }
 </style>
 {% endblock %}
 
@@ -382,7 +420,7 @@
         </thead>
         <tbody>
           {% for log in logs %}
-          <tr>
+          <tr onclick="viewLogDetails({{ log.id }})" class="cursor-pointer group">
             <td class="font-semibold text-slate-700 text-[11px] whitespace-nowrap">{{ log.logged_at|date:"d M Y" }}</td>
             <td class="text-slate-400 font-mono text-[10px]">{{ log.logged_at|date:"H:i" }}</td>
             {% if viewer_role in 'manager tl' %}
@@ -429,4 +467,125 @@
   </div>
 
 </div>
+
+<!-- DETAIL MODAL -->
+<div id="modalOverlay" class="modal-overlay" onclick="closeLogModal()"></div>
+<div id="logDetailModal" class="log-modal">
+  <div class="mod-header">
+    <div class="flex items-center justify-between mb-4">
+      <span id="mod-cat" class="badge">Category</span>
+      <button onclick="closeLogModal()" class="text-slate-400 hover:text-slate-600 transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
+    </div>
+    <div class="text-[10px] font-bold text-blue-500 mb-1" id="mod-id">TASK-ID</div>
+    <h3 class="text-lg font-extrabold text-slate-900 leading-tight" id="mod-title">Task Title</h3>
+    <div class="flex items-center gap-2 mt-3 text-[11px] text-slate-400">
+      <i class="fa-solid fa-user-circle"></i> <span id="mod-dev">Developer</span>
+      <span class="text-slate-200">|</span>
+      <i class="fa-regular fa-clock"></i> <span id="mod-time">Date/Time</span>
+    </div>
+  </div>
+  <div class="mod-body">
+    <div class="mod-section">
+      <div class="mod-sec-title"><i class="fa-solid fa-server text-blue-500"></i> Server Information</div>
+      <div class="mod-val-card">
+        <div class="mod-val-item"><span class="mod-val-key">Server Name</span><span class="mod-val-val" id="mod-srv">N/A</span></div>
+        <div class="mod-val-item"><span class="mod-val-key">Current Status</span><span class="mod-val-val" id="mod-status">Done</span></div>
+      </div>
+    </div>
+
+    <div class="mod-section" id="mod-fields-section">
+      <div class="mod-sec-title"><i class="fa-solid fa-table-list text-emerald-500"></i> Field Telemetry</div>
+      <div class="mod-val-card" id="mod-fields-container">
+        <!-- Dynamic fields here -->
+      </div>
+    </div>
+
+    <div class="mod-section" id="mod-notes-section">
+      <div class="mod-sec-title"><i class="fa-solid fa-comment-dots text-amber-500"></i> Technical Observations</div>
+      <div class="mod-text-box" id="mod-remarks">No observations provided.</div>
+    </div>
+
+    <div class="mod-section">
+      <div class="mod-sec-title"><i class="fa-solid fa-clipboard-list text-indigo-500"></i> Observations & Actions</div>
+      <div class="space-y-3">
+        <div>
+          <div class="text-[9px] font-bold text-slate-400 uppercase mb-1">Observations</div>
+          <div class="mod-text-box" id="mod-obs">—</div>
+        </div>
+        <div>
+          <div class="text-[9px] font-bold text-slate-400 uppercase mb-1">Action Taken</div>
+          <div class="mod-text-box" id="mod-act">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function closeLogModal() {
+    document.getElementById('logDetailModal').classList.remove('open');
+    document.getElementById('modalOverlay').classList.remove('open');
+    document.body.style.overflow = 'auto';
+  }
+
+  async function viewLogDetails(logId) {
+    try {
+      // Show loading or overlay
+      document.getElementById('modalOverlay').classList.add('open');
+      document.body.style.overflow = 'hidden';
+
+      const response = await fetch(`/api/log-details/${logId}/`);
+      if (!response.ok) throw new Error('Failed to fetch');
+      
+      const data = await response.json();
+
+      // Populate Modal
+      document.getElementById('mod-cat').textContent = data.status;
+      document.getElementById('mod-cat').className = `badge ${getStatusClass(data.status)}`;
+      document.getElementById('mod-id').textContent = data.task_id;
+      document.getElementById('mod-title').textContent = data.task_text;
+      document.getElementById('mod-dev').textContent = data.developer;
+      document.getElementById('mod-time').textContent = data.logged_at;
+      document.getElementById('mod-srv').textContent = data.server;
+      document.getElementById('mod-status').textContent = data.status;
+      document.getElementById('mod-remarks').textContent = data.remarks || data.notes || "No remarks provided.";
+      document.getElementById('mod-obs').textContent = data.observations || "—";
+      document.getElementById('mod-act').textContent = data.action_taken || "—";
+
+      // Build Fields
+      const fieldContainer = document.getElementById('mod-fields-container');
+      fieldContainer.innerHTML = '';
+      const fields = data.fields_data || {};
+      const fieldKeys = Object.keys(fields);
+
+      if (fieldKeys.length > 0) {
+        document.getElementById('mod-fields-section').style.display = 'block';
+        fieldKeys.forEach(key => {
+          const div = document.createElement('div');
+          div.className = 'mod-val-item';
+          const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+          div.innerHTML = `<span class="mod-val-key">${label}</span><span class="mod-val-val">${fields[key]}</span>`;
+          fieldContainer.appendChild(div);
+        });
+      } else {
+        document.getElementById('mod-fields-section').style.display = 'none';
+      }
+
+      // Open Modal
+      document.getElementById('logDetailModal').classList.add('open');
+    } catch (err) {
+      console.error(err);
+      alert('Could not load log details.');
+      closeLogModal();
+    }
+  }
+
+  function getStatusClass(status) {
+    status = status.toLowerCase();
+    if (status.includes('done')) return 'b-done';
+    if (status.includes('progress')) return 'b-wip';
+    if (status.includes('block')) return 'b-blk';
+    return 'b-miss';
+  }
+</script>
 {% endblock %}

@@ -18,8 +18,3 @@ db.sqlite3-journal
 .vscode/
 .idea/
 
-# Scratch files
-reseed.py
-seed_custom_data.py
-reseed_pro.py
-reseed_pro_v2.py

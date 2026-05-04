@@ -9,7 +9,6 @@
 .sd-hero::before{content:'';position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(59,130,246,.12) 0%,transparent 70%);border-radius:50%;top:-200px;right:-100px}
 .sd-hero::after{content:'';position:absolute;width:300px;height:300px;background:radial-gradient(circle,rgba(16,185,129,.08) 0%,transparent 70%);border-radius:50%;bottom:-100px;left:-50px}
 .kpi-glass{background:rgba(255,255,255,.06);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:13px 16px;transition:all .3s}
-.kpi-glass:hover{background:rgba(255,255,255,.1);transform:translateY(-2px)}
 .kpi-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:#64748b;font-weight:700;margin-bottom:4px}
 .kpi-num{font-size:22px;font-weight:800;line-height:1}
 .kpi-sub{font-size:10px;color:#475569;margin-top:4px;display:flex;align-items:center;gap:4px}
@@ -356,6 +355,139 @@
         {% if not task_comparisons %}
         <div class="text-center py-10"><i class="fa-solid fa-clock-rotate-left text-4xl text-slate-200 mb-3"></i><p class="text-sm text-slate-400">No comparison data yet. Complete tasks to see Before vs Now.</p></div>
         {% endif %}
+      </div>
+
+      <!-- FULL AUDIT HISTORY -->
+      <div class="card">
+        <div class="flex items-center justify-between mb-4">
+          <div class="card-title mb-0"><i class="fa-solid fa-box-archive text-slate-500"></i>Historical Audit Trail</div>
+          <div class="flex gap-1.5 p-1 bg-slate-100 rounded-xl">
+            <button onclick="switchHistoryTab('d')" id="hist-tab-d" class="hist-tab-btn px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all bg-white text-blue-600 shadow-sm">Daily</button>
+            <button onclick="switchHistoryTab('w')" id="hist-tab-w" class="hist-tab-btn px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all text-slate-500 hover:text-slate-700">Weekly</button>
+            <button onclick="switchHistoryTab('m')" id="hist-tab-m" class="hist-tab-btn px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all text-slate-500 hover:text-slate-700">Monthly</button>
+          </div>
+        </div>
+        <p class="text-xs text-slate-400 -mt-3 mb-6">Complete historical record of every verification ever performed on this node.</p>
+
+        <!-- Daily History Panel -->
+        <div id="hist-panel-d" class="hist-panel space-y-4">
+          {% for day in history_cat.d %}
+          <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div class="bg-slate-50 px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors" onclick="toggleTb(this)">
+              <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center shadow-sm">
+                  <span class="text-[10px] font-bold text-slate-400 uppercase leading-none mb-0.5">{{ day.date|date:"M" }}</span>
+                  <span class="text-lg font-black text-slate-700 leading-none">{{ day.date|date:"d" }}</span>
+                </div>
+                <div><div class="text-sm font-bold text-slate-900">{{ day.date|date:"l, d F Y" }}</div><div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{{ day.entries|length }} Checkpoints Completed</div></div>
+              </div>
+              <i class="fa-solid fa-chevron-down text-slate-400 text-sm chev transition-transform"></i>
+            </div>
+            <div class="tb-body border-t border-slate-100 bg-white"><div class="p-4 space-y-3">
+              {% for entry in day.entries %}
+              <div class="border border-slate-100 rounded-xl overflow-hidden">
+                <div class="px-4 py-3 bg-white hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors" onclick="toggleTb(this)">
+                  <div class="flex items-center gap-3"><span class="text-[9px] font-black bg-blue-100 text-blue-600 px-2 py-0.5 rounded uppercase">{{ entry.task_id }}</span><span class="text-[12px] font-bold text-slate-700">{{ entry.task_text }}</span></div>
+                  <div class="flex items-center gap-3"><span class="badge {% if entry.status == 'done' %}badge-done{% elif entry.status == 'blk' %}bg-rose-50 text-rose-600{% else %}bg-slate-100 text-slate-500{% endif %}" style="font-size:8px">{{ entry.status }}</span><i class="fa-solid fa-chevron-down text-slate-300 text-[10px] chev transition-transform"></i></div>
+                </div>
+                <div class="tb-body border-t border-slate-50 bg-slate-50/30"><div class="p-4"><div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div><div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Field Telemetry</div>
+                    {% if entry.fields_data %}<table class="w-full text-[11px] border-collapse"><tbody>{% for key, val in entry.fields_data.items %}<tr><td class="py-1.5 px-2 text-slate-500 font-medium border-b border-slate-100/50">{{ key|replace:'_, '|title }}</td><td class="py-1.5 px-2 text-slate-900 font-bold border-b border-slate-100/50 text-right">{{ val|default:"—" }}</td></tr>{% endfor %}</tbody></table>{% else %}<p class="text-[11px] text-slate-400 italic px-2">No telemetry data recorded for this task.</p>{% endif %}
+                  </div>
+                  <div class="flex flex-col h-full"><div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Technical Observations</div><div class="flex-1 bg-white border border-slate-100 rounded-lg p-3 text-[11px] text-slate-600 italic">{{ entry.remarks|default:"No engineer remarks provided." }}</div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between"><div class="flex items-center gap-2"><div class="w-5 h-5 rounded-full bg-slate-900 flex items-center justify-center text-[8px] font-bold text-white shadow-sm">{{ entry.developer.username|slice:":1"|upper }}</div><span class="text-[10px] font-bold text-slate-500">{{ entry.developer.get_full_name|default:entry.developer.username }}</span></div><span class="text-[9px] text-slate-400">{{ entry.date|date:"d M Y" }}</span></div>
+                  </div>
+                </div></div></div>
+              </div>
+              {% endfor %}
+            </div></div>
+          </div>
+          {% empty %}
+          <div class="text-center py-10 border-2 border-dashed border-slate-100 rounded-2xl">
+            <p class="text-xs text-slate-400 italic">No daily history recorded yet.</p>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Weekly History Panel -->
+        <div id="hist-panel-w" class="hist-panel hidden space-y-4">
+          {% for day in history_cat.w %}
+          <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div class="bg-slate-50 px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors" onclick="toggleTb(this)">
+              <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center shadow-sm">
+                  <span class="text-[10px] font-bold text-slate-400 uppercase leading-none mb-0.5">{{ day.date|date:"M" }}</span>
+                  <span class="text-lg font-black text-slate-700 leading-none">{{ day.date|date:"d" }}</span>
+                </div>
+                <div><div class="text-sm font-bold text-slate-900">{{ day.date|date:"l, d F Y" }}</div><div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{{ day.entries|length }} Checkpoints Completed</div></div>
+              </div>
+              <i class="fa-solid fa-chevron-down text-slate-400 text-sm chev transition-transform"></i>
+            </div>
+            <div class="tb-body border-t border-slate-100 bg-white"><div class="p-4 space-y-3">
+              {% for entry in day.entries %}
+              <div class="border border-slate-100 rounded-xl overflow-hidden">
+                <div class="px-4 py-3 bg-white hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors" onclick="toggleTb(this)">
+                  <div class="flex items-center gap-3"><span class="text-[9px] font-black bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded uppercase">{{ entry.task_id }}</span><span class="text-[12px] font-bold text-slate-700">{{ entry.task_text }}</span></div>
+                  <div class="flex items-center gap-3"><span class="badge {% if entry.status == 'done' %}badge-done{% elif entry.status == 'blk' %}bg-rose-50 text-rose-600{% else %}bg-slate-100 text-slate-500{% endif %}" style="font-size:8px">{{ entry.status }}</span><i class="fa-solid fa-chevron-down text-slate-300 text-[10px] chev transition-transform"></i></div>
+                </div>
+                <div class="tb-body border-t border-slate-50 bg-slate-50/30"><div class="p-4"><div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div><div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Field Telemetry</div>
+                    {% if entry.fields_data %}<table class="w-full text-[11px] border-collapse"><tbody>{% for key, val in entry.fields_data.items %}<tr><td class="py-1.5 px-2 text-slate-500 font-medium border-b border-slate-100/50">{{ key|replace:'_, '|title }}</td><td class="py-1.5 px-2 text-slate-900 font-bold border-b border-slate-100/50 text-right">{{ val|default:"—" }}</td></tr>{% endfor %}</tbody></table>{% else %}<p class="text-[11px] text-slate-400 italic px-2">No telemetry data recorded for this task.</p>{% endif %}
+                  </div>
+                  <div class="flex flex-col h-full"><div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Technical Observations</div><div class="flex-1 bg-white border border-slate-100 rounded-lg p-3 text-[11px] text-slate-600 italic">{{ entry.remarks|default:"No engineer remarks provided." }}</div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between"><div class="flex items-center gap-2"><div class="w-5 h-5 rounded-full bg-slate-900 flex items-center justify-center text-[8px] font-bold text-white shadow-sm">{{ entry.developer.username|slice:":1"|upper }}</div><span class="text-[10px] font-bold text-slate-500">{{ entry.developer.get_full_name|default:entry.developer.username }}</span></div><span class="text-[9px] text-slate-400">{{ entry.date|date:"d M Y" }}</span></div>
+                  </div>
+                </div></div></div>
+              </div>
+              {% endfor %}
+            </div></div>
+          </div>
+          {% empty %}
+          <div class="text-center py-10 border-2 border-dashed border-slate-100 rounded-2xl">
+            <p class="text-xs text-slate-400 italic">No weekly history recorded yet.</p>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Monthly History Panel -->
+        <div id="hist-panel-m" class="hist-panel hidden space-y-4">
+          {% for day in history_cat.m %}
+          <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div class="bg-slate-50 px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors" onclick="toggleTb(this)">
+              <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center shadow-sm">
+                  <span class="text-[10px] font-bold text-slate-400 uppercase leading-none mb-0.5">{{ day.date|date:"M" }}</span>
+                  <span class="text-lg font-black text-slate-700 leading-none">{{ day.date|date:"d" }}</span>
+                </div>
+                <div><div class="text-sm font-bold text-slate-900">{{ day.date|date:"l, d F Y" }}</div><div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{{ day.entries|length }} Checkpoints Completed</div></div>
+              </div>
+              <i class="fa-solid fa-chevron-down text-slate-400 text-sm chev transition-transform"></i>
+            </div>
+            <div class="tb-body border-t border-slate-100 bg-white"><div class="p-4 space-y-3">
+              {% for entry in day.entries %}
+              <div class="border border-slate-100 rounded-xl overflow-hidden">
+                <div class="px-4 py-3 bg-white hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors" onclick="toggleTb(this)">
+                  <div class="flex items-center gap-3"><span class="text-[9px] font-black bg-amber-100 text-amber-600 px-2 py-0.5 rounded uppercase">{{ entry.task_id }}</span><span class="text-[12px] font-bold text-slate-700">{{ entry.task_text }}</span></div>
+                  <div class="flex items-center gap-3"><span class="badge {% if entry.status == 'done' %}badge-done{% elif entry.status == 'blk' %}bg-rose-50 text-rose-600{% else %}bg-slate-100 text-slate-500{% endif %}" style="font-size:8px">{{ entry.status }}</span><i class="fa-solid fa-chevron-down text-slate-300 text-[10px] chev transition-transform"></i></div>
+                </div>
+                <div class="tb-body border-t border-slate-50 bg-slate-50/30"><div class="p-4"><div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div><div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Field Telemetry</div>
+                    {% if entry.fields_data %}<table class="w-full text-[11px] border-collapse"><tbody>{% for key, val in entry.fields_data.items %}<tr><td class="py-1.5 px-2 text-slate-500 font-medium border-b border-slate-100/50">{{ key|replace:'_, '|title }}</td><td class="py-1.5 px-2 text-slate-900 font-bold border-b border-slate-100/50 text-right">{{ val|default:"—" }}</td></tr>{% endfor %}</tbody></table>{% else %}<p class="text-[11px] text-slate-400 italic px-2">No telemetry data recorded for this task.</p>{% endif %}
+                  </div>
+                  <div class="flex flex-col h-full"><div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Technical Observations</div><div class="flex-1 bg-white border border-slate-100 rounded-lg p-3 text-[11px] text-slate-600 italic">{{ entry.remarks|default:"No engineer remarks provided." }}</div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between"><div class="flex items-center gap-2"><div class="w-5 h-5 rounded-full bg-slate-900 flex items-center justify-center text-[8px] font-bold text-white shadow-sm">{{ entry.developer.username|slice:":1"|upper }}</div><span class="text-[10px] font-bold text-slate-500">{{ entry.developer.get_full_name|default:entry.developer.username }}</span></div><span class="text-[9px] text-slate-400">{{ entry.date|date:"d M Y" }}</span></div>
+                  </div>
+                </div></div></div>
+              </div>
+              {% endfor %}
+            </div></div>
+          </div>
+          {% empty %}
+          <div class="text-center py-10 border-2 border-dashed border-slate-100 rounded-2xl">
+            <p class="text-xs text-slate-400 italic">No monthly history recorded yet.</p>
+          </div>
+          {% endfor %}
+        </div>
       </div>
     </div>
 
@@ -798,5 +930,24 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   switchTab('d');
 });
+
+const HIST_BTN_ACTIVE = 'bg-white text-blue-600 shadow-sm';
+const HIST_BTN_IDLE = 'text-slate-500 hover:text-slate-700';
+
+function switchHistoryTab(cat) {
+  // Hide all panels
+  document.querySelectorAll('.hist-panel').forEach(p => p.classList.add('hidden'));
+  // Show target panel
+  const target = document.getElementById('hist-panel-' + cat);
+  if (target) target.classList.remove('hidden');
+
+  // Update button styles
+  document.querySelectorAll('.hist-tab-btn').forEach(b => {
+    b.className = 'hist-tab-btn px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ' + HIST_BTN_IDLE;
+  });
+  const activeBtn = document.getElementById('hist-tab-' + cat);
+  if (activeBtn) activeBtn.className = 'hist-tab-btn px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ' + HIST_BTN_ACTIVE;
+}
+
 </script>
 {% endblock %}

@@ -52,9 +52,15 @@ def multiply(value, arg):
     except (ValueError, TypeError):
         return 0
 
+class DateTimeEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if hasattr(obj, 'isoformat'):
+            return obj.isoformat()
+        return super().default(obj)
+
 @register.filter
 def jsonify(value):
-    return json.dumps(value)
+    return json.dumps(value, cls=DateTimeEncoder)
 
 @register.filter
 def get_range(value):
@@ -69,3 +75,13 @@ def percentage(value, total):
         return round((float(value) / float(total)) * 100) if float(total) != 0 else 0
     except (ValueError, TypeError):
         return 0
+
+@register.filter
+def replace(value, arg):
+    """Replace all occurrences of a string with another. Usage: {{ val|replace:'old,new' }}"""
+    if not isinstance(value, str):
+        return value
+    if ',' not in arg:
+        return value
+    old, new = arg.split(',', 1)
+    return value.replace(old, new)
