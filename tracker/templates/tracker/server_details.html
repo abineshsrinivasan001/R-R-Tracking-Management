@@ -1,0 +1,953 @@
+{% extends 'tracker/base.html' %}
+{% load tracker_tags %}
+{% block title %}{{ server.name }} — Server Details{% endblock %}
+{% block header_title %}{{ server.name }} — Full Audit Profile{% endblock %}
+
+{% block extra_head %}
+<style>
+.sd-hero{background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);border-radius:20px;padding:24px 28px;color:#fff;position:relative;overflow:hidden;margin-bottom:24px}
+.sd-hero::before{content:'';position:absolute;width:500px;height:500px;background:radial-gradient(circle,rgba(59,130,246,.12) 0%,transparent 70%);border-radius:50%;top:-200px;right:-100px}
+.sd-hero::after{content:'';position:absolute;width:300px;height:300px;background:radial-gradient(circle,rgba(16,185,129,.08) 0%,transparent 70%);border-radius:50%;bottom:-100px;left:-50px}
+.kpi-glass{background:rgba(255,255,255,.06);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:13px 16px;transition:all .3s}
+.kpi-lbl{font-size:9px;text-transform:uppercase;letter-spacing:.14em;color:#64748b;font-weight:700;margin-bottom:4px}
+.kpi-num{font-size:22px;font-weight:800;line-height:1}
+.kpi-sub{font-size:10px;color:#475569;margin-top:4px;display:flex;align-items:center;gap:4px}
+.card{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.card-title{font-size:12px;font-weight:800;color:#0f172a;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title i{font-size:13px}
+.tb{border:1px solid #e2e8f0;border-radius:10px;margin-bottom:10px;overflow:hidden;transition:box-shadow .2s}
+.tb:hover{box-shadow:0 2px 8px rgba(0,0,0,.06)}
+.tb-head{background:#f8fafc;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.tb-body{padding:0 14px 14px;display:none}
+.tb-body.open{display:block}
+.ct{width:100%;border-collapse:separate;border-spacing:0;font-size:11px}
+.ct th{background:#f1f5f9;color:#64748b;font-weight:700;text-transform:uppercase;font-size:9px;letter-spacing:.1em;padding:8px 12px;text-align:left}
+.ct th:first-child{border-radius:8px 0 0 8px}
+.ct th:last-child{border-radius:0 8px 8px 0}
+.ct td{padding:8px 12px;border-bottom:1px solid #f1f5f9}
+.ct tr:last-child td{border-bottom:none}
+.chg-up{color:#dc2626;font-weight:700;font-size:10px}
+.chg-down{color:#16a34a;font-weight:700;font-size:10px}
+.chg-same{color:#94a3b8;font-size:10px}
+.chg-diff{color:#6366f1;font-weight:700;font-size:10px}
+.badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.06em}
+.badge-done{background:#dcfce7;color:#166534}
+.badge-d{background:#dbeafe;color:#1d4ed8}
+.badge-w{background:#d1fae5;color:#065f46}
+.badge-m{background:#fef3c7;color:#92400e}
+.tl-wrap{position:relative;padding-left:22px}
+.tl-wrap::before{content:'';position:absolute;left:7px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,#e2e8f0,transparent)}
+.tl-item{position:relative;padding-left:18px;margin-bottom:10px}
+.tl-dot{position:absolute;left:-15px;top:4px;width:8px;height:8px;border-radius:50%;border:2px solid #3b82f6;background:#fff;box-shadow:0 0 0 2px rgba(59,130,246,.1)}
+.pulse-dot{display:inline-block;width:7px;height:7px;border-radius:50%;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.alert-stat{border-radius:10px;padding:12px;text-align:center;flex:1}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-[1200px] mx-auto pb-16 px-4">
+
+  <div class="flex items-center gap-3 mb-5">
+    <a href="javascript:history.back()" class="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-blue-50 hover:text-blue-600 transition-all"><i class="fa-solid fa-arrow-left text-xs"></i></a>
+    <div>
+      <h1 class="text-[18px] font-extrabold text-slate-900 tracking-tight">Server Details</h1>
+      <p class="text-xs text-slate-400 font-medium">Complete Infrastructure Intelligence & Audit Trail</p>
+    </div>
+  </div>
+
+  <!-- ═══ HERO ═══ -->
+  <div class="sd-hero">
+    <div class="relative z-10">
+      <div class="flex flex-col md:flex-row md:items-start justify-between gap-4 mb-6">
+        <div class="flex items-center gap-4">
+          <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500/20 to-cyan-500/10 border border-blue-400/20 flex items-center justify-center text-blue-300 text-2xl shadow-lg shadow-blue-500/10">
+            <i class="fa-solid fa-server"></i>
+          </div>
+          <div>
+            <h2 class="text-[20px] font-extrabold mb-1 tracking-tight">{{ server.name }}</h2>
+            <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-400 font-mono">
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-network-wired text-slate-600"></i>{{ server.ip_address|default:"No IP" }}</span>
+              <span class="text-slate-700">·</span>
+              <span class="flex items-center gap-1.5"><i class="fa-solid fa-user-shield text-slate-600"></i>{{ server.owner.get_full_name|default:server.owner.username|default:"Unassigned" }}</span>
+              <span class="text-slate-700">·</span>
+              <span class="flex items-center gap-1.5"><i class="fa-regular fa-clock text-slate-600"></i>{{ server.last_checked|timesince }} ago</span>
+            </div>
+          </div>
+        </div>
+        <span class="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wider border {% if server.status == 'up' %}bg-emerald-500/10 text-emerald-300 border-emerald-500/20{% elif server.status == 'down' %}bg-rose-500/10 text-rose-300 border-rose-500/20{% else %}bg-amber-500/10 text-amber-300 border-amber-500/20{% endif %}">
+          <span class="pulse-dot {% if server.status == 'up' %}bg-emerald-400{% elif server.status == 'down' %}bg-rose-400{% else %}bg-amber-400{% endif %}"></span>
+          {{ server.get_status_display }}
+        </span>
+      </div>
+
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+        {% if latest_health %}
+        <div class="kpi-glass">
+          <div class="kpi-lbl"><i class="fa-solid fa-microchip mr-1 text-blue-400"></i>CPU</div>
+          <div class="kpi-num {% if latest_health.cpu_usage > 85 %}text-rose-400{% elif latest_health.cpu_usage > 70 %}text-amber-400{% else %}text-white{% endif %}">{{ latest_health.cpu_usage }}<span class="text-sm text-slate-500">%</span></div>
+          {% if prev_health %}<div class="kpi-sub"><i class="fa-solid fa-arrow-trend-{% if latest_health.cpu_usage > prev_health.cpu_usage %}up text-rose-400{% else %}down text-emerald-400{% endif %} text-[10px]"></i>was {{ prev_health.cpu_usage }}%</div>{% endif %}
+        </div>
+        <div class="kpi-glass">
+          <div class="kpi-lbl"><i class="fa-solid fa-memory mr-1 text-emerald-400"></i>Memory</div>
+          <div class="kpi-num {% if latest_health.memory_usage > 85 %}text-rose-400{% elif latest_health.memory_usage > 70 %}text-amber-400{% else %}text-white{% endif %}">{{ latest_health.memory_usage }}<span class="text-sm text-slate-500">%</span></div>
+          {% if prev_health %}<div class="kpi-sub"><i class="fa-solid fa-arrow-trend-{% if latest_health.memory_usage > prev_health.memory_usage %}up text-rose-400{% else %}down text-emerald-400{% endif %} text-[10px]"></i>was {{ prev_health.memory_usage }}%</div>{% endif %}
+        </div>
+        <div class="kpi-glass">
+          <div class="kpi-lbl"><i class="fa-solid fa-hard-drive mr-1 text-amber-400"></i>Disk</div>
+          <div class="kpi-num {% if latest_health.disk_usage > 85 %}text-rose-400{% elif latest_health.disk_usage > 70 %}text-amber-400{% else %}text-white{% endif %}">{{ latest_health.disk_usage }}<span class="text-sm text-slate-500">%</span></div>
+          {% if prev_health %}<div class="kpi-sub"><i class="fa-solid fa-arrow-trend-{% if latest_health.disk_usage > prev_health.disk_usage %}up text-rose-400{% else %}down text-emerald-400{% endif %} text-[10px]"></i>was {{ prev_health.disk_usage }}%</div>{% endif %}
+        </div>
+        <div class="kpi-glass">
+          <div class="kpi-lbl"><i class="fa-solid fa-wifi mr-1 text-purple-400"></i>Network</div>
+          <div class="kpi-num text-white">{{ latest_health.network_utilization }}<span class="text-sm text-slate-500">%</span></div>
+        </div>
+        {% else %}
+        <div class="kpi-glass col-span-4"><div class="text-slate-500 text-sm py-2">No health data recorded yet.</div></div>
+        {% endif %}
+        <div class="kpi-glass">
+          <div class="kpi-lbl"><i class="fa-solid fa-circle-check mr-1 text-blue-400"></i>Verified</div>
+          <div class="kpi-num text-white">{{ total_tasks_done }}</div>
+          <div class="kpi-sub text-slate-500">tasks completed</div>
+        </div>
+        <div class="kpi-glass">
+          <div class="kpi-lbl"><i class="fa-solid fa-bell mr-1 text-rose-400"></i>Alerts</div>
+          <div class="kpi-num {% if total_critical > 0 %}text-rose-400{% else %}text-emerald-400{% endif %}">{{ total_critical }}</div>
+          <div class="kpi-sub text-slate-500">{{ total_warning }} warnings</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ MAIN GRID ═══ -->
+  <div class="grid grid-cols-1 lg:grid-cols-5 gap-6">
+
+    <!-- LEFT: 3/5 -->
+    <div class="lg:col-span-3 space-y-6">
+
+      <!-- HEALTH TREND CHART -->
+      <div class="card">
+        <div class="flex items-center justify-between mb-4">
+          <div class="card-title mb-0"><i class="fa-solid fa-chart-area text-blue-500"></i>7-Day Health Trend</div>
+          <!-- Clickable toggle legend -->
+          <div class="flex gap-2" id="health-legend">
+            <button onclick="toggleSeries(0)" id="leg-0"
+              class="health-leg-btn flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold transition-all
+                     border-blue-200 bg-blue-50 text-blue-600 hover:bg-blue-100">
+              <span class="w-2 h-2 rounded-full bg-blue-500 inline-block"></span>CPU
+            </button>
+            <button onclick="toggleSeries(1)" id="leg-1"
+              class="health-leg-btn flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold transition-all
+                     border-emerald-200 bg-emerald-50 text-emerald-600 hover:bg-emerald-100">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>Memory
+            </button>
+            <button onclick="toggleSeries(2)" id="leg-2"
+              class="health-leg-btn flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold transition-all
+                     border-amber-200 bg-amber-50 text-amber-600 hover:bg-amber-100">
+              <span class="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>Disk
+            </button>
+          </div>
+        </div>
+        <div style="position:relative;height:210px"><canvas id="healthChart"></canvas></div>
+      </div>
+
+      <!-- 7-DAY COMPLETION HISTORY -->
+      <div class="card">
+        <div class="flex items-center justify-between mb-4">
+          <div class="card-title mb-0"><i class="fa-solid fa-chart-column text-cyan-500"></i>7-Day Task Completion</div>
+          <div class="flex items-center gap-2">
+            <!-- Toggle legend pills -->
+            <button onclick="toggleComp(0)" id="cleg-0"
+              class="cleg-btn flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold transition-all border-emerald-200 bg-emerald-50 text-emerald-600">
+              <span class="w-2 h-2 rounded-full bg-emerald-500"></span>Done
+            </button>
+            <button onclick="toggleComp(1)" id="cleg-1"
+              class="cleg-btn flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold transition-all border-slate-200 bg-slate-50 text-slate-500">
+              <span class="w-2 h-2 rounded-full bg-slate-300"></span>Remaining
+            </button>
+            <!-- Stacked / Grouped toggle -->
+            <button id="stack-toggle" onclick="toggleStack()"
+              class="flex items-center gap-1 px-2.5 py-1 rounded-full border border-blue-200 bg-blue-50 text-blue-600 text-[10px] font-bold transition-all hover:bg-blue-100">
+              <i class="fa-solid fa-layer-group text-[9px]"></i> Stacked
+            </button>
+          </div>
+        </div>
+        <div style="position:relative;height:200px"><canvas id="completionChart"></canvas></div>
+      </div>
+
+
+      <!-- TASK PROGRESS -->
+      <div class="card">
+        <div class="card-title" style="font-size:13px"><i class="fa-solid fa-list-check text-indigo-500"></i>Today's Task Completion</div>
+        <div class="space-y-3">
+          {% for cat, info in task_counts.items %}
+          <div class="flex items-center gap-4 py-2 {% if not forloop.last %}border-b border-slate-50{% endif %}">
+            <!-- Icon + Label -->
+            <div class="flex items-center gap-2 w-[90px] flex-shrink-0">
+              <div class="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0
+                {% if cat == 'd' %}bg-blue-100{% elif cat == 'w' %}bg-emerald-100{% else %}bg-amber-100{% endif %}">
+                <i class="text-[11px]
+                  {% if cat == 'd' %}fa-solid fa-calendar-day text-blue-600
+                  {% elif cat == 'w' %}fa-solid fa-calendar-week text-emerald-600
+                  {% else %}fa-solid fa-calendar text-amber-600{% endif %}"></i>
+              </div>
+              <span class="text-[11px] font-bold text-slate-600 uppercase tracking-wide">{{ info.label }}</span>
+            </div>
+            <!-- Progress Bar -->
+            <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+              <div class="h-full rounded-full transition-all duration-500
+                {% if cat == 'd' %}bg-blue-500{% elif cat == 'w' %}bg-emerald-500{% else %}bg-amber-500{% endif %}"
+                style="width:{{ info.pct }}%"></div>
+            </div>
+            <!-- Count + Pct -->
+            <div class="flex items-center gap-3 flex-shrink-0 text-right">
+              <span class="text-[11px] text-slate-400 font-medium">{{ info.done }}<span class="text-slate-300">/{{ info.total }}</span></span>
+              <span class="text-[11px] font-bold w-9
+                {% if cat == 'd' %}text-blue-600{% elif cat == 'w' %}text-emerald-600{% else %}text-amber-600{% endif %}">{{ info.pct }}%</span>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <!-- BEFORE VS NOW — Tabbed by Category -->
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-code-compare text-purple-500"></i>Before vs Now — Field Comparison</div>
+        <p class="text-xs text-slate-400 -mt-3 mb-5">Click any task to expand and see how values changed between checks.</p>
+
+        <!-- Category Tabs -->
+        <div class="flex gap-2 mb-5 border-b border-slate-100 pb-0">
+          {% with d_count=task_comparisons|length %}
+          <button onclick="switchTab('d')" id="tab-d"
+            class="tab-btn px-4 py-2.5 text-xs font-bold rounded-t-xl border-b-2 transition-all border-blue-500 text-blue-600 bg-blue-50">
+            <i class="fa-solid fa-calendar-day text-[10px] mr-1"></i> Daily
+            <span class="ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] bg-blue-100 text-blue-600" id="cnt-d">0</span>
+          </button>
+          <button onclick="switchTab('w')" id="tab-w"
+            class="tab-btn px-4 py-2.5 text-xs font-bold rounded-t-xl border-b-2 transition-all border-transparent text-slate-500 hover:text-slate-700">
+            <i class="fa-solid fa-calendar-week text-[10px] mr-1"></i> Weekly
+            <span class="ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] bg-slate-100 text-slate-400" id="cnt-w">0</span>
+          </button>
+          <button onclick="switchTab('m')" id="tab-m"
+            class="tab-btn px-4 py-2.5 text-xs font-bold rounded-t-xl border-b-2 transition-all border-transparent text-slate-500 hover:text-slate-700">
+            <i class="fa-solid fa-calendar text-[10px] mr-1"></i> Monthly
+            <span class="ml-1.5 px-1.5 py-0.5 rounded-full text-[9px] bg-slate-100 text-slate-400" id="cnt-m">0</span>
+          </button>
+          {% endwith %}
+        </div>
+
+        <!-- DAILY TASKS -->
+        <div id="panel-d">
+          {% with tasks_in_cat=task_comparisons %}
+          {% for tc in tasks_in_cat %}{% if tc.task_id|slice:":1" == 'd' %}
+          <div class="tb">
+            <div class="tb-head" onclick="toggleTb(this)">
+              <div class="flex items-center gap-3">
+                <span class="text-[10px] font-extrabold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-md uppercase">{{ tc.task_id }}</span>
+                <span class="text-[13px] font-semibold text-slate-800">{{ tc.task_text|truncatechars:55 }}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-[10px] text-slate-400 font-medium">{{ tc.current_date|date:"d M Y" }}{% if tc.previous_date %} · was {{ tc.previous_date|date:"d M" }}{% endif %}</span>
+                <span class="badge {% if tc.current_status == 'done' %}badge-done{% else %}bg-slate-100 text-slate-500{% endif %}">{{ tc.current_status }}</span>
+                <i class="fa-solid fa-chevron-down text-slate-400 text-xs chev" style="transition:transform .2s"></i>
+              </div>
+            </div>
+            <div class="tb-body">
+              {% if tc.fields %}
+              <table class="ct mt-3">
+                <thead><tr><th style="width:30%">Metric</th><th style="width:25%">Previous</th><th style="width:25%">Current</th><th style="width:20%">Change</th></tr></thead>
+                <tbody>
+                {% for f in tc.fields %}
+                <tr>
+                  <td class="font-semibold text-slate-700">{{ f.key }}</td>
+                  <td class="text-slate-400 italic">{{ f.previous|default:"—" }}</td>
+                  <td class="font-bold text-slate-800">{{ f.current|default:"—" }}</td>
+                  <td>{% if f.change == 'up' %}<span class="chg-up"><i class="fa-solid fa-arrow-up text-[9px]"></i> Higher</span>{% elif f.change == 'down' %}<span class="chg-down"><i class="fa-solid fa-arrow-down text-[9px]"></i> Lower</span>{% elif f.change == 'changed' %}<span class="chg-diff"><i class="fa-solid fa-shuffle text-[9px]"></i> Changed</span>{% else %}<span class="chg-same"><i class="fa-solid fa-equals text-[9px]"></i> Same</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+              {% else %}<p class="text-xs text-slate-400 italic pt-3">No field data recorded.</p>{% endif %}
+              <div class="text-[11px] text-slate-400 mt-4 pt-3 border-t border-slate-100">Verified by <strong class="text-slate-600">{{ tc.developer.get_full_name|default:tc.developer.username }}</strong></div>
+            </div>
+          </div>
+          {% endif %}{% endfor %}
+          {% endwith %}
+          <div id="empty-d" class="hidden text-center py-10"><i class="fa-solid fa-calendar-day text-4xl text-slate-200 mb-3"></i><p class="text-sm text-slate-400">No daily task comparisons yet.</p></div>
+        </div>
+
+        <!-- WEEKLY TASKS -->
+        <div id="panel-w" class="hidden">
+          {% for tc in task_comparisons %}{% if tc.task_id|slice:":1" == 'w' %}
+          <div class="tb">
+            <div class="tb-head" onclick="toggleTb(this)">
+              <div class="flex items-center gap-3">
+                <span class="text-[10px] font-extrabold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-md uppercase">{{ tc.task_id }}</span>
+                <span class="text-[13px] font-semibold text-slate-800">{{ tc.task_text|truncatechars:55 }}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-[10px] text-slate-400 font-medium">{{ tc.current_date|date:"d M Y" }}{% if tc.previous_date %} · was {{ tc.previous_date|date:"d M" }}{% endif %}</span>
+                <span class="badge {% if tc.current_status == 'done' %}badge-done{% else %}bg-slate-100 text-slate-500{% endif %}">{{ tc.current_status }}</span>
+                <i class="fa-solid fa-chevron-down text-slate-400 text-xs chev" style="transition:transform .2s"></i>
+              </div>
+            </div>
+            <div class="tb-body">
+              {% if tc.fields %}
+              <table class="ct mt-3">
+                <thead><tr><th style="width:30%">Metric</th><th style="width:25%">Previous</th><th style="width:25%">Current</th><th style="width:20%">Change</th></tr></thead>
+                <tbody>
+                {% for f in tc.fields %}
+                <tr>
+                  <td class="font-semibold text-slate-700">{{ f.key }}</td>
+                  <td class="text-slate-400 italic">{{ f.previous|default:"—" }}</td>
+                  <td class="font-bold text-slate-800">{{ f.current|default:"—" }}</td>
+                  <td>{% if f.change == 'up' %}<span class="chg-up"><i class="fa-solid fa-arrow-up text-[9px]"></i> Higher</span>{% elif f.change == 'down' %}<span class="chg-down"><i class="fa-solid fa-arrow-down text-[9px]"></i> Lower</span>{% elif f.change == 'changed' %}<span class="chg-diff"><i class="fa-solid fa-shuffle text-[9px]"></i> Changed</span>{% else %}<span class="chg-same"><i class="fa-solid fa-equals text-[9px]"></i> Same</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+              {% else %}<p class="text-xs text-slate-400 italic pt-3">No field data recorded.</p>{% endif %}
+              <div class="text-[11px] text-slate-400 mt-4 pt-3 border-t border-slate-100">Verified by <strong class="text-slate-600">{{ tc.developer.get_full_name|default:tc.developer.username }}</strong></div>
+            </div>
+          </div>
+          {% endif %}{% endfor %}
+          <div id="empty-w" class="text-center py-10"><i class="fa-solid fa-calendar-week text-4xl text-slate-200 mb-3"></i><p class="text-sm text-slate-400">No weekly task comparisons yet.</p></div>
+        </div>
+
+        <!-- MONTHLY TASKS -->
+        <div id="panel-m" class="hidden">
+          {% for tc in task_comparisons %}{% if tc.task_id|slice:":1" == 'm' %}
+          <div class="tb">
+            <div class="tb-head" onclick="toggleTb(this)">
+              <div class="flex items-center gap-3">
+                <span class="text-[10px] font-extrabold bg-amber-100 text-amber-700 px-2.5 py-1 rounded-md uppercase">{{ tc.task_id }}</span>
+                <span class="text-[13px] font-semibold text-slate-800">{{ tc.task_text|truncatechars:55 }}</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-[10px] text-slate-400 font-medium">{{ tc.current_date|date:"d M Y" }}{% if tc.previous_date %} · was {{ tc.previous_date|date:"d M" }}{% endif %}</span>
+                <span class="badge {% if tc.current_status == 'done' %}badge-done{% else %}bg-slate-100 text-slate-500{% endif %}">{{ tc.current_status }}</span>
+                <i class="fa-solid fa-chevron-down text-slate-400 text-xs chev" style="transition:transform .2s"></i>
+              </div>
+            </div>
+            <div class="tb-body">
+              {% if tc.fields %}
+              <table class="ct mt-3">
+                <thead><tr><th style="width:30%">Metric</th><th style="width:25%">Previous</th><th style="width:25%">Current</th><th style="width:20%">Change</th></tr></thead>
+                <tbody>
+                {% for f in tc.fields %}
+                <tr>
+                  <td class="font-semibold text-slate-700">{{ f.key }}</td>
+                  <td class="text-slate-400 italic">{{ f.previous|default:"—" }}</td>
+                  <td class="font-bold text-slate-800">{{ f.current|default:"—" }}</td>
+                  <td>{% if f.change == 'up' %}<span class="chg-up"><i class="fa-solid fa-arrow-up text-[9px]"></i> Higher</span>{% elif f.change == 'down' %}<span class="chg-down"><i class="fa-solid fa-arrow-down text-[9px]"></i> Lower</span>{% elif f.change == 'changed' %}<span class="chg-diff"><i class="fa-solid fa-shuffle text-[9px]"></i> Changed</span>{% else %}<span class="chg-same"><i class="fa-solid fa-equals text-[9px]"></i> Same</span>{% endif %}</td>
+                </tr>
+                {% endfor %}
+                </tbody>
+              </table>
+              {% else %}<p class="text-xs text-slate-400 italic pt-3">No field data recorded.</p>{% endif %}
+              <div class="text-[11px] text-slate-400 mt-4 pt-3 border-t border-slate-100">Verified by <strong class="text-slate-600">{{ tc.developer.get_full_name|default:tc.developer.username }}</strong></div>
+            </div>
+          </div>
+          {% endif %}{% endfor %}
+          <div id="empty-m" class="text-center py-10"><i class="fa-solid fa-calendar text-4xl text-slate-200 mb-3"></i><p class="text-sm text-slate-400">No monthly task comparisons yet.</p></div>
+        </div>
+
+        {% if not task_comparisons %}
+        <div class="text-center py-10"><i class="fa-solid fa-clock-rotate-left text-4xl text-slate-200 mb-3"></i><p class="text-sm text-slate-400">No comparison data yet. Complete tasks to see Before vs Now.</p></div>
+        {% endif %}
+      </div>
+
+      <!-- FULL AUDIT HISTORY -->
+      <div class="card">
+        <div class="flex items-center justify-between mb-4">
+          <div class="card-title mb-0"><i class="fa-solid fa-box-archive text-slate-500"></i>Historical Audit Trail</div>
+          <div class="flex gap-1.5 p-1 bg-slate-100 rounded-xl">
+            <button onclick="switchHistoryTab('d')" id="hist-tab-d" class="hist-tab-btn px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all bg-white text-blue-600 shadow-sm">Daily</button>
+            <button onclick="switchHistoryTab('w')" id="hist-tab-w" class="hist-tab-btn px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all text-slate-500 hover:text-slate-700">Weekly</button>
+            <button onclick="switchHistoryTab('m')" id="hist-tab-m" class="hist-tab-btn px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all text-slate-500 hover:text-slate-700">Monthly</button>
+          </div>
+        </div>
+        <p class="text-xs text-slate-400 -mt-3 mb-6">Complete historical record of every verification ever performed on this node.</p>
+
+        <!-- Daily History Panel -->
+        <div id="hist-panel-d" class="hist-panel space-y-4">
+          {% for day in history_cat.d %}
+          <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div class="bg-slate-50 px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors" onclick="toggleTb(this)">
+              <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center shadow-sm">
+                  <span class="text-[10px] font-bold text-slate-400 uppercase leading-none mb-0.5">{{ day.date|date:"M" }}</span>
+                  <span class="text-lg font-black text-slate-700 leading-none">{{ day.date|date:"d" }}</span>
+                </div>
+                <div><div class="text-sm font-bold text-slate-900">{{ day.date|date:"l, d F Y" }}</div><div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{{ day.entries|length }} Checkpoints Completed</div></div>
+              </div>
+              <i class="fa-solid fa-chevron-down text-slate-400 text-sm chev transition-transform"></i>
+            </div>
+            <div class="tb-body border-t border-slate-100 bg-white"><div class="p-4 space-y-3">
+              {% for entry in day.entries %}
+              <div class="border border-slate-100 rounded-xl overflow-hidden">
+                <div class="px-4 py-3 bg-white hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors" onclick="toggleTb(this)">
+                  <div class="flex items-center gap-3"><span class="text-[9px] font-black bg-blue-100 text-blue-600 px-2 py-0.5 rounded uppercase">{{ entry.task_id }}</span><span class="text-[12px] font-bold text-slate-700">{{ entry.task_text }}</span></div>
+                  <div class="flex items-center gap-3"><span class="badge {% if entry.status == 'done' %}badge-done{% elif entry.status == 'blk' %}bg-rose-50 text-rose-600{% else %}bg-slate-100 text-slate-500{% endif %}" style="font-size:8px">{{ entry.status }}</span><i class="fa-solid fa-chevron-down text-slate-300 text-[10px] chev transition-transform"></i></div>
+                </div>
+                <div class="tb-body border-t border-slate-50 bg-slate-50/30"><div class="p-4"><div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div><div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Field Telemetry</div>
+                    {% if entry.fields_data %}<table class="w-full text-[11px] border-collapse"><tbody>{% for key, val in entry.fields_data.items %}<tr><td class="py-1.5 px-2 text-slate-500 font-medium border-b border-slate-100/50">{{ key|replace:'_, '|title }}</td><td class="py-1.5 px-2 text-slate-900 font-bold border-b border-slate-100/50 text-right">{{ val|default:"—" }}</td></tr>{% endfor %}</tbody></table>{% else %}<p class="text-[11px] text-slate-400 italic px-2">No telemetry data recorded for this task.</p>{% endif %}
+                  </div>
+                  <div class="flex flex-col h-full"><div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Technical Observations</div><div class="flex-1 bg-white border border-slate-100 rounded-lg p-3 text-[11px] text-slate-600 italic">{{ entry.remarks|default:"No engineer remarks provided." }}</div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between"><div class="flex items-center gap-2"><div class="w-5 h-5 rounded-full bg-slate-900 flex items-center justify-center text-[8px] font-bold text-white shadow-sm">{{ entry.developer.username|slice:":1"|upper }}</div><span class="text-[10px] font-bold text-slate-500">{{ entry.developer.get_full_name|default:entry.developer.username }}</span></div><span class="text-[9px] text-slate-400">{{ entry.date|date:"d M Y" }}</span></div>
+                  </div>
+                </div></div></div>
+              </div>
+              {% endfor %}
+            </div></div>
+          </div>
+          {% empty %}
+          <div class="text-center py-10 border-2 border-dashed border-slate-100 rounded-2xl">
+            <p class="text-xs text-slate-400 italic">No daily history recorded yet.</p>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Weekly History Panel -->
+        <div id="hist-panel-w" class="hist-panel hidden space-y-4">
+          {% for day in history_cat.w %}
+          <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div class="bg-slate-50 px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors" onclick="toggleTb(this)">
+              <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center shadow-sm">
+                  <span class="text-[10px] font-bold text-slate-400 uppercase leading-none mb-0.5">{{ day.date|date:"M" }}</span>
+                  <span class="text-lg font-black text-slate-700 leading-none">{{ day.date|date:"d" }}</span>
+                </div>
+                <div><div class="text-sm font-bold text-slate-900">{{ day.date|date:"l, d F Y" }}</div><div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{{ day.entries|length }} Checkpoints Completed</div></div>
+              </div>
+              <i class="fa-solid fa-chevron-down text-slate-400 text-sm chev transition-transform"></i>
+            </div>
+            <div class="tb-body border-t border-slate-100 bg-white"><div class="p-4 space-y-3">
+              {% for entry in day.entries %}
+              <div class="border border-slate-100 rounded-xl overflow-hidden">
+                <div class="px-4 py-3 bg-white hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors" onclick="toggleTb(this)">
+                  <div class="flex items-center gap-3"><span class="text-[9px] font-black bg-emerald-100 text-emerald-600 px-2 py-0.5 rounded uppercase">{{ entry.task_id }}</span><span class="text-[12px] font-bold text-slate-700">{{ entry.task_text }}</span></div>
+                  <div class="flex items-center gap-3"><span class="badge {% if entry.status == 'done' %}badge-done{% elif entry.status == 'blk' %}bg-rose-50 text-rose-600{% else %}bg-slate-100 text-slate-500{% endif %}" style="font-size:8px">{{ entry.status }}</span><i class="fa-solid fa-chevron-down text-slate-300 text-[10px] chev transition-transform"></i></div>
+                </div>
+                <div class="tb-body border-t border-slate-50 bg-slate-50/30"><div class="p-4"><div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div><div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Field Telemetry</div>
+                    {% if entry.fields_data %}<table class="w-full text-[11px] border-collapse"><tbody>{% for key, val in entry.fields_data.items %}<tr><td class="py-1.5 px-2 text-slate-500 font-medium border-b border-slate-100/50">{{ key|replace:'_, '|title }}</td><td class="py-1.5 px-2 text-slate-900 font-bold border-b border-slate-100/50 text-right">{{ val|default:"—" }}</td></tr>{% endfor %}</tbody></table>{% else %}<p class="text-[11px] text-slate-400 italic px-2">No telemetry data recorded for this task.</p>{% endif %}
+                  </div>
+                  <div class="flex flex-col h-full"><div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Technical Observations</div><div class="flex-1 bg-white border border-slate-100 rounded-lg p-3 text-[11px] text-slate-600 italic">{{ entry.remarks|default:"No engineer remarks provided." }}</div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between"><div class="flex items-center gap-2"><div class="w-5 h-5 rounded-full bg-slate-900 flex items-center justify-center text-[8px] font-bold text-white shadow-sm">{{ entry.developer.username|slice:":1"|upper }}</div><span class="text-[10px] font-bold text-slate-500">{{ entry.developer.get_full_name|default:entry.developer.username }}</span></div><span class="text-[9px] text-slate-400">{{ entry.date|date:"d M Y" }}</span></div>
+                  </div>
+                </div></div></div>
+              </div>
+              {% endfor %}
+            </div></div>
+          </div>
+          {% empty %}
+          <div class="text-center py-10 border-2 border-dashed border-slate-100 rounded-2xl">
+            <p class="text-xs text-slate-400 italic">No weekly history recorded yet.</p>
+          </div>
+          {% endfor %}
+        </div>
+
+        <!-- Monthly History Panel -->
+        <div id="hist-panel-m" class="hist-panel hidden space-y-4">
+          {% for day in history_cat.m %}
+          <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
+            <div class="bg-slate-50 px-5 py-4 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors" onclick="toggleTb(this)">
+              <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center shadow-sm">
+                  <span class="text-[10px] font-bold text-slate-400 uppercase leading-none mb-0.5">{{ day.date|date:"M" }}</span>
+                  <span class="text-lg font-black text-slate-700 leading-none">{{ day.date|date:"d" }}</span>
+                </div>
+                <div><div class="text-sm font-bold text-slate-900">{{ day.date|date:"l, d F Y" }}</div><div class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{{ day.entries|length }} Checkpoints Completed</div></div>
+              </div>
+              <i class="fa-solid fa-chevron-down text-slate-400 text-sm chev transition-transform"></i>
+            </div>
+            <div class="tb-body border-t border-slate-100 bg-white"><div class="p-4 space-y-3">
+              {% for entry in day.entries %}
+              <div class="border border-slate-100 rounded-xl overflow-hidden">
+                <div class="px-4 py-3 bg-white hover:bg-slate-50 flex items-center justify-between cursor-pointer transition-colors" onclick="toggleTb(this)">
+                  <div class="flex items-center gap-3"><span class="text-[9px] font-black bg-amber-100 text-amber-600 px-2 py-0.5 rounded uppercase">{{ entry.task_id }}</span><span class="text-[12px] font-bold text-slate-700">{{ entry.task_text }}</span></div>
+                  <div class="flex items-center gap-3"><span class="badge {% if entry.status == 'done' %}badge-done{% elif entry.status == 'blk' %}bg-rose-50 text-rose-600{% else %}bg-slate-100 text-slate-500{% endif %}" style="font-size:8px">{{ entry.status }}</span><i class="fa-solid fa-chevron-down text-slate-300 text-[10px] chev transition-transform"></i></div>
+                </div>
+                <div class="tb-body border-t border-slate-50 bg-slate-50/30"><div class="p-4"><div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div><div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Field Telemetry</div>
+                    {% if entry.fields_data %}<table class="w-full text-[11px] border-collapse"><tbody>{% for key, val in entry.fields_data.items %}<tr><td class="py-1.5 px-2 text-slate-500 font-medium border-b border-slate-100/50">{{ key|replace:'_, '|title }}</td><td class="py-1.5 px-2 text-slate-900 font-bold border-b border-slate-100/50 text-right">{{ val|default:"—" }}</td></tr>{% endfor %}</tbody></table>{% else %}<p class="text-[11px] text-slate-400 italic px-2">No telemetry data recorded for this task.</p>{% endif %}
+                  </div>
+                  <div class="flex flex-col h-full"><div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2 px-1">Technical Observations</div><div class="flex-1 bg-white border border-slate-100 rounded-lg p-3 text-[11px] text-slate-600 italic">{{ entry.remarks|default:"No engineer remarks provided." }}</div>
+                    <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between"><div class="flex items-center gap-2"><div class="w-5 h-5 rounded-full bg-slate-900 flex items-center justify-center text-[8px] font-bold text-white shadow-sm">{{ entry.developer.username|slice:":1"|upper }}</div><span class="text-[10px] font-bold text-slate-500">{{ entry.developer.get_full_name|default:entry.developer.username }}</span></div><span class="text-[9px] text-slate-400">{{ entry.date|date:"d M Y" }}</span></div>
+                  </div>
+                </div></div></div>
+              </div>
+              {% endfor %}
+            </div></div>
+          </div>
+          {% empty %}
+          <div class="text-center py-10 border-2 border-dashed border-slate-100 rounded-2xl">
+            <p class="text-xs text-slate-400 italic">No monthly history recorded yet.</p>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: 2/5 -->
+    <div class="lg:col-span-2 space-y-6">
+
+      <!-- SERVER INFO & COMPLIANCE -->
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-info-circle text-blue-500"></i>Server Overview</div>
+        <div class="space-y-3 mb-5">
+          <div class="flex items-center justify-between py-2 border-b border-slate-50">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Status</span>
+            <span class="badge {% if server.status == 'up' %}badge-done{% else %}bg-rose-50 text-rose-600{% endif %}">{{ server.get_status_display }}</span>
+          </div>
+          <div class="flex items-center justify-between py-2 border-b border-slate-50">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Owner</span>
+            <span class="text-xs font-bold text-slate-700">{{ server.owner.get_full_name|default:server.owner.username }}</span>
+          </div>
+          <div class="flex items-center justify-between py-2 border-b border-slate-50">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">IP Address</span>
+            <span class="text-xs font-mono text-slate-600">{{ server.ip_address|default:"Not set" }}</span>
+          </div>
+          <div class="flex items-center justify-between py-2 border-b border-slate-50">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Tracking Since</span>
+            <span class="text-xs font-bold text-slate-600">{{ server_since|date:"d M Y" }}</span>
+          </div>
+          <div class="flex items-center justify-between py-2">
+            <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Total Logs</span>
+            <span class="text-xs font-bold text-slate-700">{{ total_logs }}</span>
+          </div>
+        </div>
+
+        <!-- Compliance Ring — SVG Animated -->
+        <div class="rounded-2xl bg-gradient-to-br from-slate-50 to-blue-50/40 border border-slate-100 p-5">
+          <div class="flex items-center gap-5">
+            <!-- SVG Ring -->
+            <div class="relative flex-shrink-0" style="width:80px;height:80px">
+              <svg width="80" height="80" viewBox="0 0 80 80" style="transform:rotate(-90deg)">
+                <!-- Track -->
+                <circle cx="40" cy="40" r="34" fill="none" stroke="#e2e8f0" stroke-width="5"/>
+                <!-- Arc -->
+                <circle id="compliance-arc" cx="40" cy="40" r="34" fill="none"
+                  stroke="{% if compliance_pct >= 80 %}#10b981{% elif compliance_pct >= 50 %}#f59e0b{% else %}#ef4444{% endif %}"
+                  stroke-width="5"
+                  stroke-linecap="round"
+                  stroke-dasharray="213.6"
+                  stroke-dashoffset="213.6"
+                  style="transition:stroke-dashoffset 1.3s cubic-bezier(.4,0,.2,1)"/>
+              </svg>
+              <!-- Centre label -->
+              <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">
+                <span id="compliance-num" class="text-[15px] font-extrabold text-slate-900">0%</span>
+              </div>
+            </div>
+            <!-- Text -->
+            <div>
+              <div class="text-[13px] font-extrabold text-slate-900">Compliance Score</div>
+              <div class="text-[11px] text-slate-400 mt-0.5">{{ total_tasks_done }} of {{ total_logs }} tasks completed</div>
+              <div class="inline-flex items-center gap-1.5 mt-2 px-2 py-0.5 rounded-full text-[10px] font-bold
+                {% if compliance_pct >= 80 %}bg-emerald-50 text-emerald-700
+                {% elif compliance_pct >= 50 %}bg-amber-50 text-amber-700
+                {% else %}bg-rose-50 text-rose-700{% endif %}">
+                <span class="w-1.5 h-1.5 rounded-full
+                  {% if compliance_pct >= 80 %}bg-emerald-500
+                  {% elif compliance_pct >= 50 %}bg-amber-500
+                  {% else %}bg-rose-500{% endif %}"></span>
+                {% if compliance_pct >= 80 %}Excellent{% elif compliance_pct >= 50 %}Needs Improvement{% else %}Critical{% endif %}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALERTS -->
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-shield-halved text-rose-500"></i>Alert Summary</div>
+        <div class="flex gap-3 mb-5">
+          <div class="alert-stat bg-rose-50 border border-rose-100"><div class="text-2xl font-black text-rose-600">{{ total_critical }}</div><div class="text-[10px] text-rose-400 font-bold uppercase mt-0.5">Critical</div></div>
+          <div class="alert-stat bg-amber-50 border border-amber-100"><div class="text-2xl font-black text-amber-600">{{ total_warning }}</div><div class="text-[10px] text-amber-400 font-bold uppercase mt-0.5">Warning</div></div>
+          <div class="alert-stat bg-emerald-50 border border-emerald-100"><div class="text-2xl font-black text-emerald-600">{{ resolved_alerts }}</div><div class="text-[10px] text-emerald-400 font-bold uppercase mt-0.5">Resolved</div></div>
+        </div>
+        {% for alert in alert_entries|slice:":5" %}
+        <div class="border border-slate-100 rounded-xl p-4 mb-3 hover:shadow-sm transition-all">
+          <div class="flex items-center justify-between mb-1.5"><span class="text-xs font-bold text-slate-800">{{ alert.tool_name }}</span><span class="text-[10px] text-slate-400">{{ alert.date|date:"d M Y" }}</span></div>
+          <p class="text-[11px] text-slate-500 mb-2 line-clamp-2">{{ alert.alert_description }}</p>
+          <div class="flex items-center gap-2"><span class="badge {% if alert.status == 'resolved' %}badge-done{% else %}bg-rose-50 text-rose-600{% endif %}">{{ alert.get_status_display }}</span>{% if alert.critical_alerts > 0 %}<span class="text-[10px] text-rose-500 font-bold">{{ alert.critical_alerts }} critical</span>{% endif %}</div>
+        </div>
+        {% empty %}<p class="text-xs text-slate-400 italic text-center py-6">No alerts recorded for this server.</p>{% endfor %}
+      </div>
+
+      <!-- RECENT ACTIVITY -->
+      <div class="card">
+        <div class="card-title"><i class="fa-solid fa-timeline text-slate-400"></i>Recent Activity</div>
+        <div class="tl-wrap">
+          {% for log in recent_logs|slice:":12" %}
+          <div class="tl-item">
+            <div class="tl-dot {% if log.status == 'done' %}border-emerald-500{% elif log.status == 'blk' %}border-rose-500{% else %}border-amber-500{% endif %}" style="box-shadow:0 0 0 2px {% if log.status == 'done' %}rgba(16,185,129,.12){% elif log.status == 'blk' %}rgba(239,68,68,.12){% else %}rgba(245,158,11,.12){% endif %}"></div>
+            <div class="text-[10px] font-semibold text-slate-700 leading-tight" style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ log.task_text|default:log.task_id|truncatechars:38 }}</div>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <span class="text-[9px] text-slate-400 font-medium">{{ log.logged_at|date:"d M, H:i" }}</span>
+              <span class="badge {% if log.status == 'done' %}badge-done{% elif log.category == 'd' %}badge-d{% elif log.category == 'w' %}badge-w{% else %}badge-m{% endif %}" style="font-size:8px;padding:1px 5px">{{ log.status }}</span>
+            </div>
+          </div>
+          {% empty %}<p class="text-xs text-slate-400 italic text-center py-6">No activity logged yet.</p>{% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 7-Day Health Trend ──
+const T = {{ health_trend_json|safe }};
+const ctx = document.getElementById('healthChart').getContext('2d');
+
+// Per-series thin gradient fills (very faint)
+function makeGrad(ctx, h, r, g, b) {
+  const gr = ctx.createLinearGradient(0, 0, 0, h);
+  gr.addColorStop(0, `rgba(${r},${g},${b},.10)`);
+  gr.addColorStop(0.6, `rgba(${r},${g},${b},.03)`);
+  gr.addColorStop(1, `rgba(${r},${g},${b},0)`);
+  return gr;
+}
+const h = 210;
+
+const DS_CFG = [
+  { label:'CPU %',   key:'cpu',    color:'#3b82f6', r:59,  g:130, b:246 },
+  { label:'Memory %',key:'memory', color:'#10b981', r:16,  g:185, b:129 },
+  { label:'Disk %',  key:'disk',   color:'#f59e0b', r:245, g:158, b:11  },
+];
+
+const labels = T.map(t => t.is_today ? t.day + ' ★' : t.day);
+
+const datasets = DS_CFG.map(d => ({
+  label: d.label,
+  data: T.map(t => t[d.key]),
+  borderColor: d.color,
+  backgroundColor: makeGrad(ctx, h, d.r, d.g, d.b),
+  borderWidth: 2,
+  tension: 0.5,
+  fill: true,
+  pointRadius: 3,
+  pointHoverRadius: 6,
+  pointBackgroundColor: d.color,
+  pointBorderColor: '#fff',
+  pointBorderWidth: 1.5,
+  pointHoverBorderWidth: 2,
+  spanGaps: true,
+  segment: {
+    borderColor: ctx => ctx.p0.skip || ctx.p1.skip ? 'transparent' : undefined,
+  }
+}));
+
+const healthChartInst = new Chart(ctx, {
+  type: 'line',
+  data: { labels, datasets },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 900, easing: 'easeInOutQuart' },
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0f172a',
+        titleColor: '#94a3b8',
+        bodyColor: '#f1f5f9',
+        titleFont: { size: 11, weight: '600', family: "'Inter',sans-serif" },
+        bodyFont: { size: 12, weight: '700', family: "'Inter',sans-serif" },
+        padding: 12,
+        cornerRadius: 10,
+        displayColors: true,
+        boxWidth: 8,
+        boxHeight: 8,
+        boxPadding: 4,
+        callbacks: {
+          title: items => {
+            const i = items[0].dataIndex;
+            return T[i].is_today ? T[i].day + ' (Today)' : T[i].day;
+          },
+          label: c => {
+            const v = c.raw;
+            const marker = v == null ? 'N/A' : v + '%';
+            return `  ${c.dataset.label.replace(' %','')}: ${marker}`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        border: { display: false },
+        ticks: { font: { size: 11, weight: '600', family: "'Inter',sans-serif" }, color: '#94a3b8', maxRotation: 0 }
+      },
+      y: {
+        min: 0, max: 100,
+        grid: { color: 'rgba(241,245,249,.8)', drawBorder: false, lineWidth: 1 },
+        border: { display: false, dash: [4, 4] },
+        ticks: {
+          font: { size: 10, family: "'Inter',sans-serif" },
+          color: '#cbd5e1',
+          stepSize: 25,
+          padding: 8,
+          callback: v => v + '%'
+        }
+      }
+    }
+  }
+});
+
+// Toggle series visibility + button active state
+const BTN_ACTIVE = [
+  'border-blue-200 bg-blue-50 text-blue-600',
+  'border-emerald-200 bg-emerald-50 text-emerald-600',
+  'border-amber-200 bg-amber-50 text-amber-600',
+];
+const BTN_HIDDEN = 'border-slate-200 bg-slate-50 text-slate-400 line-through';
+const DOTS = ['bg-blue-500','bg-emerald-500','bg-amber-500'];
+
+function toggleSeries(idx) {
+  const isHidden = !healthChartInst.isDatasetVisible(idx);
+  healthChartInst.setDatasetVisibility(idx, isHidden);
+  healthChartInst.update('active');
+  const btn = document.getElementById('leg-' + idx);
+  const dot = btn.querySelector('span');
+  if (isHidden) {
+    // showing again
+    btn.className = `health-leg-btn flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold transition-all ${BTN_ACTIVE[idx]} hover:opacity-80`;
+    dot.className = `w-2 h-2 rounded-full ${DOTS[idx]} inline-block`;
+  } else {
+    // hiding
+    btn.className = `health-leg-btn flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold transition-all ${BTN_HIDDEN}`;
+    dot.className = 'w-2 h-2 rounded-full bg-slate-300 inline-block';
+  }
+}
+
+// ── 7-Day Completion Bar Chart — Interactive ──
+const C = {{ completion_7d_json|safe }};
+const ctx2 = document.getElementById('completionChart').getContext('2d');
+
+// Gradient for Completed bars
+const compGrad = ctx2.createLinearGradient(0, 0, 0, 200);
+compGrad.addColorStop(0, 'rgba(16,185,129,1)');
+compGrad.addColorStop(1, 'rgba(6,182,212,0.75)');
+
+// Highlight today's bar slightly brighter
+const doneColors = C.map(c =>
+  c.is_today
+    ? (() => { const g = ctx2.createLinearGradient(0,0,0,200); g.addColorStop(0,'#34d399'); g.addColorStop(1,'#22d3ee'); return g; })()
+    : compGrad
+);
+
+let isStacked = true;
+
+const completionChartInst = new Chart(ctx2, {
+  type: 'bar',
+  data: {
+    labels: C.map(c => c.is_today ? c.day + ' ★' : c.day),
+    datasets: [
+      {
+        label: 'Completed',
+        data: C.map(c => c.done),
+        backgroundColor: doneColors,
+        hoverBackgroundColor: 'rgba(16,185,129,1)',
+        borderRadius: { topLeft: 6, topRight: 6 },
+        borderSkipped: false,
+        barPercentage: 0.55,
+        categoryPercentage: 0.75,
+        order: 1
+      },
+      {
+        label: 'Remaining',
+        data: C.map(c => Math.max(0, c.total - c.done)),
+        backgroundColor: 'rgba(226,232,240,0.6)',
+        hoverBackgroundColor: 'rgba(203,213,225,0.9)',
+        borderRadius: { topLeft: 6, topRight: 6 },
+        borderSkipped: false,
+        barPercentage: 0.55,
+        categoryPercentage: 0.75,
+        order: 2
+      }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 700, easing: 'easeOutQuart' },
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#0f172a',
+        titleColor: '#94a3b8',
+        bodyColor: '#f1f5f9',
+        titleFont: { size: 11, weight: '600', family: "'Inter',sans-serif" },
+        bodyFont: { size: 12, weight: '700', family: "'Inter',sans-serif" },
+        padding: 12,
+        cornerRadius: 10,
+        displayColors: true,
+        boxWidth: 8, boxHeight: 8, boxPadding: 4,
+        callbacks: {
+          title: items => {
+            const i = items[0].dataIndex;
+            const pct = C[i].total > 0 ? Math.round((C[i].done / C[i].total) * 100) : 0;
+            return (C[i].is_today ? '★ Today — ' : '') + C[i].date + '  ┃  ' + pct + '% done';
+          },
+          label: c => `  ${c.dataset.label}: ${c.raw} task${c.raw !== 1 ? 's' : ''}`
+        }
+      }
+    },
+    scales: {
+      x: {
+        stacked: true,
+        grid: { display: false },
+        border: { display: false },
+        ticks: {
+          font: { size: 11, weight: '600', family: "'Inter',sans-serif" },
+          color: '#94a3b8',
+          maxRotation: 0
+        }
+      },
+      y: {
+        stacked: true,
+        grid: { color: 'rgba(241,245,249,.8)', drawBorder: false, lineWidth: 1 },
+        border: { display: false },
+        ticks: {
+          font: { size: 10, family: "'Inter',sans-serif" },
+          color: '#cbd5e1',
+          precision: 0,
+          stepSize: 5,
+          padding: 6
+        }
+      }
+    }
+  }
+});
+
+// Toggle Completed / Remaining series
+const CLEG_ACTIVE = [
+  'border-emerald-200 bg-emerald-50 text-emerald-600',
+  'border-slate-200 bg-slate-50 text-slate-500',
+];
+const CLEG_HIDDEN = 'border-slate-100 bg-slate-50 text-slate-300 line-through';
+const CDOTS = ['bg-emerald-500', 'bg-slate-300'];
+
+function toggleComp(idx) {
+  const isHidden = !completionChartInst.isDatasetVisible(idx);
+  completionChartInst.setDatasetVisibility(idx, isHidden);
+  completionChartInst.update('active');
+  const btn = document.getElementById('cleg-' + idx);
+  const dot = btn.querySelector('span');
+  if (isHidden) {
+    btn.className = `cleg-btn flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold transition-all ${CLEG_ACTIVE[idx]}`;
+    dot.className = `w-2 h-2 rounded-full ${CDOTS[idx]}`;
+  } else {
+    btn.className = `cleg-btn flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-[10px] font-bold transition-all ${CLEG_HIDDEN}`;
+    dot.className = 'w-2 h-2 rounded-full bg-slate-200';
+  }
+}
+
+// Stacked / Grouped toggle
+function toggleStack() {
+  isStacked = !isStacked;
+  completionChartInst.options.scales.x.stacked = isStacked;
+  completionChartInst.options.scales.y.stacked = isStacked;
+  completionChartInst.update('active');
+  const btn = document.getElementById('stack-toggle');
+  if (isStacked) {
+    btn.innerHTML = '<i class="fa-solid fa-layer-group text-[9px]"></i> Stacked';
+    btn.className = 'flex items-center gap-1 px-2.5 py-1 rounded-full border border-blue-200 bg-blue-50 text-blue-600 text-[10px] font-bold transition-all hover:bg-blue-100';
+  } else {
+    btn.innerHTML = '<i class="fa-solid fa-bars text-[9px]"></i> Grouped';
+    btn.className = 'flex items-center gap-1 px-2.5 py-1 rounded-full border border-purple-200 bg-purple-50 text-purple-600 text-[10px] font-bold transition-all hover:bg-purple-100';
+  }
+}
+
+// ── Compliance Ring — SVG animated ──
+(function(){
+  const pct = {{ compliance_pct }};
+  const circumference = 2 * Math.PI * 34; // 213.6
+  const arc = document.getElementById('compliance-arc');
+  const numEl = document.getElementById('compliance-num');
+  // Animate arc draw
+  setTimeout(() => {
+    const offset = circumference * (1 - pct / 100);
+    arc.style.strokeDashoffset = offset;
+  }, 120);
+  // Count-up number
+  let start = 0;
+  const step = Math.ceil(pct / 40);
+  const timer = setInterval(() => {
+    start = Math.min(start + step, pct);
+    numEl.textContent = start + '%';
+    if (start >= pct) clearInterval(timer);
+  }, 28);
+})();
+
+// ── Tab switching for Before vs Now ──────────────────────────
+const TAB_CFG = {
+  d: { active: 'border-blue-500 text-blue-600 bg-blue-50',   idle: 'border-transparent text-slate-500' },
+  w: { active: 'border-emerald-500 text-emerald-600 bg-emerald-50', idle: 'border-transparent text-slate-500' },
+  m: { active: 'border-amber-500 text-amber-600 bg-amber-50',  idle: 'border-transparent text-slate-500' },
+};
+
+function switchTab(cat) {
+  ['d','w','m'].forEach(c => {
+    document.getElementById('panel-' + c).classList.add('hidden');
+    const btn = document.getElementById('tab-' + c);
+    btn.className = 'tab-btn px-4 py-2.5 text-xs font-bold rounded-t-xl border-b-2 transition-all ' + TAB_CFG[c].idle;
+  });
+  document.getElementById('panel-' + cat).classList.remove('hidden');
+  const activeBtn = document.getElementById('tab-' + cat);
+  activeBtn.className = 'tab-btn px-4 py-2.5 text-xs font-bold rounded-t-xl border-b-2 transition-all ' + TAB_CFG[cat].active;
+
+  // Count tasks in this panel and update badge
+  const panelItems = document.getElementById('panel-' + cat).querySelectorAll('.tb');
+  const countEl = document.getElementById('cnt-' + cat);
+  if (countEl) { countEl.textContent = panelItems.length; }
+
+  // Show/hide empty state for weekly/monthly
+  const emptyEl = document.getElementById('empty-' + cat);
+  if (emptyEl) { emptyEl.classList.toggle('hidden', panelItems.length > 0); }
+}
+
+function toggleTb(head) {
+  const body = head.nextElementSibling;
+  body.classList.toggle('open');
+  const chev = head.querySelector('.chev');
+  if (chev) chev.style.transform = body.classList.contains('open') ? 'rotate(180deg)' : 'rotate(0)';
+}
+
+// On page load: set daily tab active, count all tab badges, hide empties with items
+document.addEventListener('DOMContentLoaded', () => {
+  ['d','w','m'].forEach(c => {
+    const items = document.getElementById('panel-' + c).querySelectorAll('.tb');
+    const countEl = document.getElementById('cnt-' + c);
+    if (countEl) countEl.textContent = items.length;
+    const emptyEl = document.getElementById('empty-' + c);
+    if (emptyEl) emptyEl.classList.toggle('hidden', items.length > 0);
+  });
+  switchTab('d');
+});
+
+const HIST_BTN_ACTIVE = 'bg-white text-blue-600 shadow-sm';
+const HIST_BTN_IDLE = 'text-slate-500 hover:text-slate-700';
+
+function switchHistoryTab(cat) {
+  // Hide all panels
+  document.querySelectorAll('.hist-panel').forEach(p => p.classList.add('hidden'));
+  // Show target panel
+  const target = document.getElementById('hist-panel-' + cat);
+  if (target) target.classList.remove('hidden');
+
+  // Update button styles
+  document.querySelectorAll('.hist-tab-btn').forEach(b => {
+    b.className = 'hist-tab-btn px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ' + HIST_BTN_IDLE;
+  });
+  const activeBtn = document.getElementById('hist-tab-' + cat);
+  if (activeBtn) activeBtn.className = 'hist-tab-btn px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all ' + HIST_BTN_ACTIVE;
+}
+
+</script>
+{% endblock %}

@@ -49,7 +49,7 @@
         <div class="text-[16px] font-bold text-slate-800 leading-tight">{{ servers|length }} Managed</div>
       </div>
     </div>
-    
+
     <div class="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-4 shadow-sm">
       <div class="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
         <i class="fa-solid fa-calendar-day text-lg"></i>
@@ -80,37 +80,45 @@
       </div>
     </div>
   </div>
-  
+
   <!-- INFRASTRUCTURE HUB -->
   <div class="mb-8">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
       <div>
         <h3 class="display text-[18px] font-bold text-slate-900">Your Managed Servers</h3>
-        <p class="text-[12px] text-slate-500">Manage and verify checklists across <span class="font-bold text-slate-700">{{ servers|length }}</span> active servers</p>
+        <p class="text-[12px] text-slate-500">Manage and verify checklists across <span
+            class="font-bold text-slate-700">{{ servers|length }}</span> active servers</p>
       </div>
-      
+
       <div class="flex items-center gap-3">
         <div class="relative group">
-          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs group-focus-within:text-blue-500 transition-colors"></i>
-          <input type="text" id="server-search" placeholder="Search IP or hostname..." 
+          <i
+            class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs group-focus-within:text-blue-500 transition-colors"></i>
+          <input type="text" id="server-search" placeholder="Search IP or hostname..."
             class="bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-[12px] focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 w-64 transition-all"
             onkeyup="filterServers()">
         </div>
         <div class="flex bg-slate-200/50 p-1 rounded-xl border border-slate-200/60">
-          <button onclick="filterByStatus('all')" class="status-btn active px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all bg-white text-slate-900 shadow-sm">All</button>
-          <button onclick="filterByStatus('up')" class="status-btn px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all text-slate-500 hover:text-slate-700">Online</button>
-          <button onclick="filterByStatus('down')" class="status-btn px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all text-slate-500 hover:text-slate-700">Critical</button>
+          <button onclick="filterByStatus('all')"
+            class="status-btn active px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all bg-white text-slate-900 shadow-sm">All</button>
+          <button onclick="filterByStatus('up')"
+            class="status-btn px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all text-slate-500 hover:text-slate-700">Online</button>
+          <button onclick="filterByStatus('down')"
+            class="status-btn px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all text-slate-500 hover:text-slate-700">Critical</button>
         </div>
       </div>
     </div>
-    
+
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="server-grid">
       {% for server in servers %}
-      <div class="server-card bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-lg hover:border-blue-200 transition-all group" 
-        data-name="{{ server.name|lower }}" data-ip="{{ server.ip|lower }}" data-status="{{ server.status }}">
-        <div class="p-4 border-b border-slate-100 bg-slate-50/50">
+      <div
+        class="server-card bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-lg hover:border-blue-200 transition-all group"
+        data-name="{{ server.name|lower }}" data-ip="{{ server.ip|lower }}" data-status="{{ server.status }}"
+        data-compliance="{% if server.daily_pct == 100 %}full{% elif server.daily_pct > 0 %}partial{% else %}none{% endif %}">
+        <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white text-sm shadow-md transition-all">
+            <div
+              class="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white text-sm shadow-md transition-all">
               <i class="fa-solid fa-server"></i>
             </div>
             <div class="overflow-hidden">
@@ -118,50 +126,121 @@
               <div class="text-[10px] text-slate-400 font-medium font-mono mt-0.5">{{ server.ip }}</div>
             </div>
           </div>
+          {% if viewer_role == 'manager' or viewer_role == 'tl' %}
+          <div class="flex items-center gap-1.5">
+            <button onclick="openReassignModal('{{ server.id }}', '{{ server.name }}', '{{ server.owner.id }}')"
+              class="text-slate-400 hover:text-blue-500 transition-colors p-1 rounded-lg hover:bg-blue-50"
+              title="Reassign Owner">
+              <i class="fa-solid fa-user-gear text-xs"></i>
+            </button>
+            <button type="button"
+              onclick="confirmDeleteServer('{{ server.id }}', '{{ server.name }}')"
+              class="text-slate-400 hover:text-rose-500 transition-colors p-1 rounded-lg hover:bg-rose-50"
+              title="Remove Server">
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
+          </div>
+          {% endif %}
         </div>
         <div class="p-5">
           <!-- PROGRESS BAR (DAILY) -->
-          <div class="pbar h-1 mb-4 bg-slate-100">
-            <div class="pfill {% if server.daily_pct == 100 %}bg-emerald-500{% else %}bg-blue-600{% endif %}" style="width: {{ server.daily_pct }}%"></div>
+          <div class="flex items-center justify-between mb-4 gap-3">
+            <div class="pbar flex-1 bg-slate-100">
+              <div class="pfill {% if server.daily_pct == 100 %}bg-emerald-500{% else %}bg-blue-600{% endif %}"
+                style="width: {{ server.daily_pct }}%"></div>
+            </div>
+            <span class="text-[11px] font-bold {% if server.daily_pct == 100 %}text-emerald-600{% elif server.daily_pct > 0 %}text-blue-600{% else %}text-slate-400{% endif %}">
+              {{ server.daily_pct }}%
+            </span>
           </div>
-          
+
+          <!-- 7-DAY HISTORY MATRIX -->
+          <div class="flex items-center justify-between gap-1 mb-5">
+            {% for h in server.history_7d %}
+            <div class="flex flex-col items-center gap-1 flex-1">
+              <div class="w-full h-1.5 rounded-full shadow-sm transition-all
+                   {% if h.pct == 100 %}bg-blue-600
+                   {% elif h.pct > 0 %}bg-blue-300
+                   {% else %}bg-slate-100{% endif %}" title="{{ h.day }}: {{ h.pct }}% Done"></div>
+              <span class="text-[8px] font-bold {% if h.is_today %}text-blue-600{% else %}text-slate-400{% endif %} uppercase">{{ h.day|slice:":1" }}</span>
+            </div>
+            {% endfor %}
+          </div>
+
           <!-- D/W/M PROGRESS LIST -->
-          <div class="space-y-3.5 mb-5">
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2.5">
-                <i class="fa-solid fa-calendar-day text-[12px] text-blue-500"></i> Daily Task
-              </span>
-              <span class="text-[12px] font-bold text-slate-800">{{ server.daily_done }}/{{ server.daily_total }}</span>
+          <div class="space-y-2.5 mb-5">
+            <!-- DAILY -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <i class="fa-solid fa-calendar-day text-[10px] text-blue-500"></i> Daily
+                  <span class="text-slate-300 font-normal normal-case">Today</span>
+                </span>
+                <span class="text-[11px] font-bold {% if server.daily_done == server.daily_total and server.daily_total > 0 %}text-emerald-600{% elif server.daily_done > 0 %}text-blue-600{% else %}text-slate-400{% endif %}">{{ server.daily_done }}/{{ server.daily_total }}</span>
+              </div>
+              <div class="h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  class="h-full rounded-full {% if server.daily_pct == 100 %}bg-emerald-500{% elif server.daily_pct > 0 %}bg-blue-500{% else %}bg-slate-200{% endif %} transition-all"
+                  style="width:{{ server.daily_pct }}%"></div>
+              </div>
             </div>
-            <div class="flex items-center justify-between">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2.5">
-                <i class="fa-solid fa-calendar-week text-[12px] text-emerald-500"></i> Weekly Task
-              </span>
-              <span class="text-[12px] font-bold text-slate-800">{{ server.weekly_done }}/{{ server.weekly_total }}</span>
+            <!-- WEEKLY -->
+            <div>
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <i class="fa-solid fa-calendar-week text-[10px] text-emerald-500"></i> Weekly
+                  <span class="text-slate-300 font-normal normal-case">This Week</span>
+                </span>
+                <span class="text-[11px] font-bold {% if server.weekly_done == server.weekly_total and server.weekly_total > 0 %}text-emerald-600{% elif server.weekly_done > 0 %}text-emerald-500{% else %}text-slate-400{% endif %}">{{ server.weekly_done }}/{{ server.weekly_total }}</span>
+              </div>
+              <div class="h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  class="h-full rounded-full {% if server.weekly_pct == 100 %}bg-emerald-500{% elif server.weekly_pct > 0 %}bg-emerald-400{% else %}bg-slate-200{% endif %} transition-all"
+                  style="width:{{ server.weekly_pct }}%"></div>
+              </div>
             </div>
-            <div class="flex items-center justify-between border-b border-slate-50 pb-2.5">
-              <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2.5">
-                <i class="fa-solid fa-calendar-check text-[12px] text-amber-500"></i> Monthly Task
-              </span>
-              <span class="text-[12px] font-bold text-slate-800">{{ server.monthly_done }}/{{ server.monthly_total }}</span>
+            <!-- MONTHLY -->
+            <div class="pb-1">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <i class="fa-solid fa-calendar-check text-[10px] text-amber-500"></i> Monthly
+                  <span class="text-slate-300 font-normal normal-case">This Month</span>
+                </span>
+                <span class="text-[11px] font-bold {% if server.monthly_done == server.monthly_total and server.monthly_total > 0 %}text-emerald-600{% elif server.monthly_done > 0 %}text-amber-500{% else %}text-slate-400{% endif %}">{{ server.monthly_done }}/{{ server.monthly_total }}</span>
+              </div>
+              <div class="h-1 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  class="h-full rounded-full {% if server.monthly_pct == 100 %}bg-emerald-500{% elif server.monthly_pct > 0 %}bg-amber-400{% else %}bg-slate-200{% endif %} transition-all"
+                  style="width:{{ server.monthly_pct }}%"></div>
+              </div>
             </div>
           </div>
-          
-          <a href="{% url 'server_management' server.id %}" class="w-full py-2.5 bg-slate-900 text-white rounded-xl text-[11px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/5 active:scale-95">
-            <i class="fa-solid fa-clipboard-list text-xs"></i> Verify Responsibilities
-          </a>
-          
+
+
+          <div class="flex gap-2">
+            <a href="{% url 'server_management' server.id %}"
+              class="flex-1 py-2 bg-slate-900 text-white rounded-xl text-[11px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-1.5 shadow-md active:scale-95">
+              <i class="fa-solid fa-clipboard-check text-xs"></i> Verify
+            </a>
+            <a href="{% url 'server_details' server.id %}"
+              class="flex-1 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-xl text-[11px] font-bold hover:bg-blue-100 transition-all flex items-center justify-center gap-1.5 active:scale-95">
+              <i class="fa-solid fa-address-card text-xs"></i> Details
+            </a>
+          </div>
+
           <div class="mt-3 text-center">
-             <span class="text-[9px] text-slate-400 font-medium italic">Last activity {{ server.last_checked|timesince }} ago</span>
+            <span class="text-[9px] text-slate-400 font-medium italic">Last activity {{ server.last_checked|timesince }}
+              ago</span>
           </div>
         </div>
       </div>
       {% endfor %}
-      
+
       <!-- ADD SERVER BUTTON -->
       <div onclick="openAddServerModal()"
         class="bg-slate-50 rounded-2xl border border-dashed border-slate-300 flex flex-col items-center justify-center p-6 text-center group cursor-pointer hover:bg-white hover:border-blue-400 transition-all">
-        <div class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-blue-500 group-hover:border-blue-300 shadow-sm transition-all mb-3">
+        <div
+          class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-blue-500 group-hover:border-blue-300 shadow-sm transition-all mb-3">
           <i class="fa-solid fa-plus text-sm"></i>
         </div>
         <div class="text-[12px] font-bold text-slate-500 group-hover:text-blue-600">Add New Server</div>
@@ -169,300 +248,210 @@
     </div>
   </div>
 
-  <!-- ── ANALYTICS ROW ─────────────────────────────────────────── -->
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-5 mb-6">
+  <!-- Hidden shared delete form — keeps <form> out of flex card headers -->
+  <form id="delete-server-form" method="post" action="" style="display:none">
+    {% csrf_token %}
+  </form>
 
-    <!-- Compliance Wheel -->
-    <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-      <div class="flex items-center justify-between mb-4">
-        <h3 class="text-[13px] font-bold text-slate-800 flex items-center gap-2">
-          <i class="fa-solid fa-circle-half-stroke text-emerald-500"></i> Today's Compliance
-        </h3>
-        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Live</span>
-      </div>
-      <div class="relative h-[180px] flex items-center justify-center">
-        <canvas id="complianceChart"></canvas>
-        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-          <span class="text-[22px] font-bold text-slate-900 leading-none">{{ servers|length }}</span>
-          <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Servers</span>
-        </div>
-      </div>
-      <div class="mt-4 grid grid-cols-3 gap-2 text-center">
-        <div class="bg-emerald-50 rounded-xl p-2">
-          <div class="text-[15px] font-bold text-emerald-700">{{ compliance.full }}</div>
-          <div class="text-[9px] font-bold text-emerald-500 uppercase tracking-wide">Done</div>
-        </div>
-        <div class="bg-blue-50 rounded-xl p-2">
-          <div class="text-[15px] font-bold text-blue-700">{{ compliance.partial }}</div>
-          <div class="text-[9px] font-bold text-blue-500 uppercase tracking-wide">Partial</div>
-        </div>
-        <div class="bg-slate-50 rounded-xl p-2">
-          <div class="text-[15px] font-bold text-slate-600">{{ compliance.none }}</div>
-          <div class="text-[9px] font-bold text-slate-400 uppercase tracking-wide">Pending</div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Grouped R&R Matrix Chart -->
-    <div class="lg:col-span-2 bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-      <div class="flex items-center justify-between mb-4">
-        <div>
-          <h3 class="text-[13px] font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-chart-bar text-indigo-500"></i> R&R Matrix — All Servers
-          </h3>
-          <p class="text-[10px] text-slate-400 mt-0.5">Daily · Weekly · Monthly completion per server</p>
-        </div>
-        <div class="flex items-center gap-3 text-[9px] font-bold text-slate-400 uppercase">
-          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-blue-500 inline-block"></span> Daily</span>
-          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-emerald-500 inline-block"></span> Weekly</span>
-          <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-sm bg-amber-500 inline-block"></span> Monthly</span>
-        </div>
-      </div>
-      <div class="h-[230px]">
-        <canvas id="managementChart"></canvas>
-      </div>
-    </div>
-  </div>
 
-  <!-- ── PER-SERVER LOGS (Tabbed) ──────────────────────────────── -->
+  <!-- ── Quick Shortcuts: Jump to Server Logs ── -->
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-6">
     <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
       <h3 class="text-[13px] font-bold text-slate-800 flex items-center gap-2">
-        <i class="fa-solid fa-scroll text-slate-500"></i> Server Activity Logs
+        <i class="fa-solid fa-arrow-up-right-from-square text-blue-500"></i> Quick Log Access
       </h3>
-      <span class="text-[10px] text-slate-400">Select a server tab to view its logs</span>
+      <a href="{% url 'task_log_filter' %}"
+        class="text-[11px] text-blue-600 font-bold hover:underline flex items-center gap-1">
+        View All Logs <i class="fa-solid fa-arrow-right text-[9px]"></i>
+      </a>
     </div>
-
-    <!-- Server Tabs -->
-    <div class="flex gap-1 px-4 pt-3 border-b border-slate-100 overflow-x-auto" id="server-log-tabs">
+    <div class="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
       {% for server in servers %}
-      <button onclick="loadServerLog({{ server.id }}, '{{ server.name }}')"
-        id="slog-tab-{{ server.id }}"
-        class="slog-tab px-4 py-2 text-[11px] font-bold rounded-t-xl whitespace-nowrap transition-all border-b-2 border-transparent text-slate-500 hover:text-slate-800{% if forloop.first %} active-slog-tab{% endif %}">
-        <i class="fa-solid fa-server text-[10px] mr-1"></i>{{ server.name }}
-      </button>
-      {% endfor %}
-    </div>
-
-    <!-- Log Body -->
-    <div id="server-log-body" class="overflow-x-auto min-h-[200px]">
-      <div id="server-log-loading" class="flex items-center justify-center py-16 text-slate-400">
-        <i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Loading logs...
-      </div>
-      <table class="w-full text-left hidden" id="server-log-table">
-        <thead>
-          <tr class="bg-slate-50 border-b border-slate-100">
-            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date & Time</th>
-            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Task</th>
-            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category</th>
-            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Engineer</th>
-            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
-            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Notes</th>
-          </tr>
-        </thead>
-        <tbody id="server-log-rows" class="divide-y divide-slate-50"></tbody>
-      </table>
-      <div id="server-log-empty" class="hidden flex items-center justify-center py-16 text-slate-400 text-[12px]">
-        <i class="fa-regular fa-folder-open mr-2"></i> No logs found for this server yet.
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<!-- MY TASKS SECTION -->
-<div id="page-tasks" class="page-section hidden">
-  <div class="max-w-5xl mx-auto">
-    <div class="flex items-center justify-between mb-6">
-      <div>
-        <h2 class="display text-[20px] font-bold text-slate-900 tracking-tight">Assigned Tasks</h2>
-        <p class="text-[12px] text-slate-500 mt-1">Review and update your R&R tracking progress</p>
-      </div>
-      <div class="flex bg-slate-100 p-1 rounded-xl">
-        <button onclick="switchTaskTab('d')" id="tab-d"
-          class="task-tab active px-5 py-1.5 text-[12px] font-bold rounded-lg transition-colors flex items-center gap-2 bg-white text-slate-900 shadow-sm">
-          Daily <span class="bg-slate-900 text-white text-[9px] px-1.5 py-0.5 rounded-md">{{ daily_total }}</span>
-        </button>
-        <button onclick="switchTaskTab('w')" id="tab-w"
-          class="task-tab px-5 py-1.5 text-[12px] font-medium rounded-lg transition-colors flex items-center gap-2 text-slate-500 hover:text-slate-900">
-          Weekly <span class="bg-slate-200 text-slate-600 text-[9px] px-1.5 py-0.5 rounded-md">{{ weekly_total }}</span>
-        </button>
-        <button onclick="switchTaskTab('m')" id="tab-m"
-          class="task-tab px-5 py-1.5 text-[12px] font-medium rounded-lg transition-colors flex items-center gap-2 text-slate-500 hover:text-slate-900">
-          Monthly <span class="bg-slate-200 text-slate-600 text-[9px] px-1.5 py-0.5 rounded-md">{{ monthly_total }}</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- TASK LISTS -->
-    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-      {% for cat in 'dwm'|make_list %}
-      <div id="list-{{ cat }}" class="task-list-container {% if cat != 'd' %}hidden{% endif %}">
-        <div class="divide-y divide-slate-100">
-          {% with tasks=task_data|get_item:cat %}
-          {% for task in tasks %}
-          <div class="px-6 py-4 flex items-center gap-5">
-            <div
-              class="w-5 h-5 rounded-md border border-slate-300 flex items-center justify-center cursor-pointer transition-colors {% if logged_ids|get_item:task.id == 'done' %}bg-slate-900 border-slate-900{% endif %}"
-              onclick="toggleTask('{{ task.id }}', this)"
-              title="Click to log details and complete task">
-              {% if logged_ids|get_item:task.id == 'done' %}<i class="fa-solid fa-check text-white text-[9px]"></i>{% endif %}
-            </div>
-
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2.5 mb-0.5">
-                <span
-                  class="w-2 h-2 rounded-full {% if task.pri == 'high' %}bg-rose-500{% elif task.pri == 'med' %}bg-amber-500{% else %}bg-emerald-500{% endif %}"></span>
-                <h4
-                  class="text-[13px] font-semibold text-slate-800 truncate {% if logged_ids|get_item:task.id == 'done' %}text-slate-400 line-through{% endif %}">
-                  {{ task.text }}
-                </h4>
-              </div>
-              <div class="flex items-center gap-4">
-                <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">{{ task.pri }}
-                  priority</span>
-                <button onclick="openNoteModal('{{ task.id }}')"
-                  class="text-[11px] font-medium text-blue-600 flex items-center gap-1.5 hover:text-blue-700">
-                  <i class="fa-regular fa-pen-to-square text-[10px]"></i> Log Details
-                </button>
-              </div>
-            </div>
-
-            <div class="flex items-center gap-1.5">
-              {% with status=logged_ids|get_item:task.id %}
-              <button onclick="openNoteModal('{{ task.id }}')"
-                class="w-8 h-8 rounded-lg flex items-center justify-center border transition-colors {% if status == 'done' %}bg-emerald-50 border-emerald-200 text-emerald-600{% else %}bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-600{% endif %}"
-                title="Mark as Done"><i class="fa-solid fa-check text-xs"></i></button>
-              <button onclick="updateTaskStatus('{{ task.id }}', 'wip')"
-                class="w-8 h-8 rounded-lg flex items-center justify-center border transition-colors {% if status == 'wip' %}bg-blue-50 border-blue-200 text-blue-600{% else %}bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-600{% endif %}"
-                title="In Progress"><i class="fa-solid fa-rotate text-xs"></i></button>
-              <button onclick="updateTaskStatus('{{ task.id }}', 'blk')"
-                class="w-8 h-8 rounded-lg flex items-center justify-center border transition-colors {% if status == 'blk' %}bg-rose-50 border-rose-200 text-rose-600{% else %}bg-slate-50 border-slate-200 text-slate-400 hover:text-slate-600{% endif %}"
-                title="Blocked"><i class="fa-solid fa-ban text-xs"></i></button>
-              {% endwith %}
-            </div>
-          </div>
-          {% endfor %}
-          {% endwith %}
+      <a href="{% url 'task_log_filter' %}?server_id={{ server.id }}"
+        class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all group">
+        <div
+          class="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center flex-shrink-0 transition-colors">
+          <i class="fa-solid fa-server text-slate-500 group-hover:text-blue-600 text-xs transition-colors"></i>
         </div>
-      </div>
+        <div class="min-w-0">
+          <div class="text-[12px] font-bold text-slate-800 truncate">{{ server.name }}</div>
+          <div class="text-[10px] text-slate-400 font-mono">{{ server.ip|default:"—" }}</div>
+        </div>
+      </a>
+      {% empty %}
+      <div class="col-span-full py-6 text-center text-slate-400 text-xs">No servers yet.</div>
       {% endfor %}
     </div>
   </div>
+
 </div>
+
+
 
 <!-- OTHER SECTIONS (Team, Log, etc.) -->
 <div id="page-team" class="page-section hidden">
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-    <div class="bg-white p-5 rounded-xl border border-slate-200">
-      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Team Average</div>
-      <div class="display text-2xl font-bold text-slate-900">78%</div>
+  <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <h3 class="display text-[20px] font-bold text-slate-900">Team Performance</h3>
+      <p class="text-[12px] text-slate-500">Real-time compliance and system coverage across the DevOps team</p>
     </div>
-    <div class="bg-white p-5 rounded-xl border border-slate-200">
-      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Full Completion</div>
-      <div class="display text-2xl font-bold text-slate-900">4</div>
-    </div>
-    <div class="bg-white p-5 rounded-xl border border-slate-200">
-      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Needs Attention</div>
-      <div class="display text-2xl font-bold text-rose-600">2</div>
-    </div>
-    <div class="bg-white p-5 rounded-xl border border-slate-200">
-      <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Members</div>
-      <div class="display text-2xl font-bold text-slate-900">{{ team_members.count }}</div>
+    <div
+      class="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100/50 px-3 py-1.5 rounded-lg border border-slate-200/60">
+      <i class="fa-solid fa-clock text-blue-500"></i>
+      Last Sync: {% now "H:i" %}
     </div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+    <div
+      class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-center">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0">
+          <i class="fa-solid fa-chart-line text-xl"></i>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Team Average</div>
+          <div class="display text-2xl font-bold text-slate-900 leading-none">{{ team_avg }}%</div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-center">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0">
+          <i class="fa-solid fa-trophy text-xl"></i>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Full Completion</div>
+          <div class="display text-2xl font-bold text-slate-900 leading-none">{{ full_comp }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-center">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 flex-shrink-0">
+          <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Needs Attention</div>
+          <div class="display text-2xl font-bold text-rose-600 leading-none">{{ needs_attn }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div
+      class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-center">
+      <div class="flex items-center gap-4">
+        <div class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 flex-shrink-0">
+          <i class="fa-solid fa-users text-xl"></i>
+        </div>
+        <div class="min-w-0">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Members</div>
+          <div class="display text-2xl font-bold text-slate-900 leading-none">{{ team_members|length }}</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
     {% for member in team_members %}
-    <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all">
-      <div class="flex items-center gap-4 mb-4">
-        <div class="w-10 h-10 rounded-lg flex items-center justify-center text-white display text-lg font-bold shadow-md shadow-slate-900/10"
-          style="background: {{ member.gradient }}">
-          {{ member.initials }}
-        </div>
-        <div class="flex-1 overflow-hidden">
-          <h4 class="text-[14px] font-bold text-slate-900 truncate">{{ member.user.get_full_name|default:member.user.username }}</h4>
-          <p class="text-[10px] text-slate-400 uppercase font-bold tracking-widest">{{ member.role }}</p>
+    <div
+      class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-lg hover:border-blue-200 transition-all group flex flex-col">
+      <div class="p-4 border-b border-slate-100 bg-slate-50/50">
+        <div class="flex items-center gap-3">
+          <div
+            class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-[13px] shadow-md transition-all flex-shrink-0"
+            style="background: {{ member.gradient }}">
+            {{ member.initials }}
+          </div>
+          <div class="min-w-0">
+            <h4 class="text-[13.5px] font-bold text-slate-900 truncate mb-0.5">{{ member.user.get_full_name|default:member.user.username }}</h4>
+            <div class="flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              <p class="text-[9px] text-slate-500 uppercase font-bold tracking-widest">{{ member.role }}</p>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="space-y-4">
+      <div class="p-4 flex-1 flex flex-col space-y-4">
         <div>
-          <div class="flex justify-between text-[11.5px] mb-1.5">
-            <span class="text-slate-500">Daily Completion</span>
-            <span class="font-bold {% if member.daily_pct == 100 %}text-emerald-600{% else %}text-blue-600{% endif %}">{{ member.daily_pct }}%</span>
+          <div class="flex justify-between items-center text-[11px] mb-1.5">
+            <span class="text-slate-500 font-semibold">Daily Compliance</span>
+            <span class="font-bold text-blue-600">{{ member.daily_pct }}%</span>
           </div>
-          <div class="pbar h-1.5 bg-slate-100">
-            <div class="pfill {% if member.daily_pct == 100 %}bg-emerald-500{% else %}bg-blue-600{% endif %}" style="width: {{ member.daily_pct }}%"></div>
+          <div class="pbar h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div
+              class="h-full rounded-full transition-all duration-700 ease-out {% if member.daily_pct == 100 %}bg-emerald-500{% else %}bg-blue-600{% endif %}"
+              style="width: {{ member.daily_pct }}%"></div>
           </div>
         </div>
+
         <div>
-          <div class="flex justify-between text-[11.5px] mb-1.5">
-            <span class="text-slate-500">System Coverage</span>
-            <span class="font-bold text-slate-400">---</span>
+          <div class="flex justify-between items-center text-[11px] mb-1.5">
+            <span class="text-slate-500 font-semibold">System Coverage</span>
+            <span class="font-bold text-slate-900">{{ member.server_count }} Nodes</span>
           </div>
-          <div class="pbar h-1.5 bg-slate-100">
-            <div class="pfill bg-slate-200" style="width: 0%"></div>
+          <div class="pbar h-1.5 bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full bg-slate-300 rounded-full"
+              style="width: {% if servers|length > 0 %}{{ member.server_count|percentage:servers|length }}{% else %}0{% endif %}%">
+            </div>
           </div>
         </div>
+
+        <div class="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
+          <div class="flex -space-x-1.5">
+            {% for i in member.server_count|get_range %}
+            {% if forloop.counter <= 4 %} <div
+              class="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[7px] font-bold text-slate-400 shadow-sm"
+              title="Managed Server">SRV</div>
+          {% endif %}
+          {% endfor %}
+          {% if member.server_count > 4 %}
+          <div
+            class="w-6 h-6 rounded-full border-2 border-white bg-blue-50 flex items-center justify-center text-[8px] font-bold text-blue-600 shadow-sm">
+            +{{ member.server_count|subtract:4 }}</div>
+          {% endif %}
+          {% if member.server_count == 0 %}
+          <div
+            class="w-6 h-6 rounded-full border-2 border-dashed border-slate-200 bg-slate-50/50 flex items-center justify-center"
+            title="No nodes assigned">
+            <i class="fa-solid fa-minus text-[8px] text-slate-300"></i>
+          </div>
+          {% endif %}
+        </div>
+        <button onclick="viewUserDetails('{{ member.user.id }}')"
+          class="text-[10px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-blue-50 transition-all">
+          Details <i class="fa-solid fa-chevron-right text-[8px]"></i>
+        </button>
       </div>
     </div>
-    {% endfor %}
+  </div>
+  {% endfor %}
+</div>
+</div>
+
+<!-- ACTIVITY LOG REDIRECT — logs live at /logs/ now -->
+<div id="page-log" class="page-section hidden">
+  <div class="bg-white rounded-2xl border border-slate-200 p-12 text-center shadow-sm">
+    <div class="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mx-auto mb-5">
+      <i class="fa-solid fa-filter text-blue-500 text-2xl"></i>
+    </div>
+    <h3 class="text-xl font-bold text-slate-900 mb-2">Task Log History</h3>
+    <p class="text-slate-500 text-sm mb-6 max-w-sm mx-auto">
+      Use the dedicated Log History page to filter by date, category, status, and server. All logs in one searchable
+      place.
+    </p>
+    <a href="{% url 'task_log_filter' %}"
+      class="inline-flex items-center gap-2 px-6 py-3 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-all shadow-md">
+      <i class="fa-solid fa-arrow-right"></i> Open Log History
+    </a>
   </div>
 </div>
 
-<!-- ACTIVITY LOG SECTION -->
-<div id="page-log" class="page-section hidden">
-  <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-    <div class="px-6 py-5 border-b border-slate-50 bg-slate-50/30">
-      <h3 class="display text-[15px] font-bold text-slate-900">Activity Log</h3>
-      <p class="text-[10px] text-slate-400 mt-1 uppercase tracking-widest font-bold">Comprehensive History</p>
-    </div>
-    <div class="overflow-x-auto">
-      <table class="w-full text-left">
-        <thead>
-          <tr class="bg-slate-50/50 border-b border-slate-100">
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date / Time</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Engineer</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Task Details</th>
-            <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Outcome</th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-50">
-          {% for log in all_logs %}
-          <tr class="text-[13px] hover:bg-slate-50/50">
-            <td class="px-6 py-4 text-slate-500 whitespace-nowrap font-medium">
-              {{ log.logged_at|date:"M d" }} <span class="text-slate-300 mx-1">·</span> {{ log.logged_at|time:"H:i" }}
-            </td>
-            <td class="px-6 py-4">
-              <div class="flex items-center gap-2.5">
-                <div class="w-5 h-5 rounded flex items-center justify-center text-white text-[9px] font-bold"
-                  style="background: {{ log.developer.developer.avatar_gradient }}">
-                  {{ log.developer.developer.initials }}
-                </div>
-                <span class="font-bold text-slate-700">{{ log.developer.get_full_name|default:log.developer.username }}</span>
-              </div>
-            </td>
-            <td class="px-6 py-4">
-              <div class="text-slate-800 font-semibold">{{ log.task_text }}</div>
-              {% if log.notes %}
-              <div class="text-[11px] text-slate-400 mt-0.5 italic truncate max-w-xs">{{ log.notes }}</div>
-              {% endif %}
-            </td>
-            <td class="px-6 py-4">
-              <span class="text-[9px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-md
-                {% if log.status == 'done' %}bg-emerald-50 text-emerald-600
-                {% elif log.status == 'blk' %}bg-rose-50 text-rose-600
-                {% else %}bg-blue-50 text-blue-600{% endif %}">
-                {{ log.status }}
-              </span>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </div>
-</div>
 
 <!-- QUICK LOG MODAL (Server Command Center) -->
 <div id="ql-modal"
@@ -484,8 +473,10 @@
     <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
       <div class="grid grid-cols-2 gap-4 mb-6">
         <div>
-          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Infrastructure Node</label>
-          <select id="modal-server" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-blue-500 font-medium">
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Infrastructure
+            Node</label>
+          <select id="modal-server"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-blue-500 font-medium">
             <option value="">Select Server...</option>
             {% for s in servers %}
             <option value="{{ s.id }}">{{ s.name }}</option>
@@ -493,19 +484,25 @@
           </select>
         </div>
         <div>
-          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Log Type</label>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Log
+            Type</label>
           <div class="flex bg-slate-100 p-1 rounded-xl">
-            <button onclick="setModalCat('d')" id="mc-d" class="flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all bg-white text-slate-900 shadow-sm">Daily</button>
-            <button onclick="setModalCat('w')" id="mc-w" class="flex-1 py-1.5 text-[11px] font-medium rounded-lg transition-all text-slate-500">Weekly</button>
-            <button onclick="setModalCat('m')" id="mc-m" class="flex-1 py-1.5 text-[11px] font-medium rounded-lg transition-all text-slate-500">Monthly</button>
+            <button onclick="setModalCat('d')" id="mc-d"
+              class="flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all bg-white text-slate-900 shadow-sm">Daily</button>
+            <button onclick="setModalCat('w')" id="mc-w"
+              class="flex-1 py-1.5 text-[11px] font-medium rounded-lg transition-all text-slate-500">Weekly</button>
+            <button onclick="setModalCat('m')" id="mc-m"
+              class="flex-1 py-1.5 text-[11px] font-medium rounded-lg transition-all text-slate-500">Monthly</button>
           </div>
           <input type="hidden" id="modal-cat" value="d">
         </div>
       </div>
 
       <div class="mb-6">
-        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Specific Task</label>
-        <select id="modal-task" onchange="renderDynamicFields()" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13.5px] focus:outline-none focus:border-blue-500 font-semibold text-slate-800">
+        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Specific
+          Task</label>
+        <select id="modal-task" onchange="renderDynamicFields()"
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13.5px] focus:outline-none focus:border-blue-500 font-semibold text-slate-800">
           <!-- Populated by JS -->
         </select>
       </div>
@@ -517,22 +514,27 @@
 
       <div class="space-y-6 border-t border-slate-100 pt-6">
         <div>
-          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Verification Status</label>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Verification
+            Status</label>
           <div class="grid grid-cols-3 gap-3">
-            <button onclick="setModalStatus('done')" id="ms-done" class="py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all flex items-center justify-center gap-2 border-green-100 bg-green-50 text-green-700">
+            <button onclick="setModalStatus('done')" id="ms-done"
+              class="py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all flex items-center justify-center gap-2 border-green-100 bg-green-50 text-green-700">
               <i class="fa-solid fa-check"></i> Done
             </button>
-            <button onclick="setModalStatus('wip')" id="ms-wip" class="py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all flex items-center justify-center gap-2 border-slate-100 bg-slate-50 text-slate-600">
+            <button onclick="setModalStatus('wip')" id="ms-wip"
+              class="py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all flex items-center justify-center gap-2 border-slate-100 bg-slate-50 text-slate-600">
               <i class="fa-solid fa-rotate"></i> WIP
             </button>
-            <button onclick="setModalStatus('blk')" id="ms-blk" class="py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all flex items-center justify-center gap-2 border-slate-100 bg-slate-50 text-slate-600">
+            <button onclick="setModalStatus('blk')" id="ms-blk"
+              class="py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all flex items-center justify-center gap-2 border-slate-100 bg-slate-50 text-slate-600">
               <i class="fa-solid fa-ban"></i> Block
             </button>
           </div>
         </div>
 
         <div>
-          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Engineer Remarks</label>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Engineer
+            Remarks</label>
           <textarea id="modal-remarks" rows="3"
             class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[13px] focus:outline-none focus:border-blue-500 resize-none transition-all"
             placeholder="Document any findings or actions taken..."></textarea>
@@ -542,8 +544,10 @@
 
     <!-- MODAL FOOTER -->
     <div class="px-8 py-6 border-t border-slate-100 bg-slate-50/50 flex gap-3">
-      <button onclick="closeQuickLogModal()" class="flex-1 bg-white border border-slate-200 text-slate-600 py-3 rounded-xl text-[13px] font-bold hover:bg-slate-50 transition-all">Cancel</button>
-      <button onclick="submitModalLog()" class="flex-[2] bg-slate-900 text-white py-3 rounded-xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/20">
+      <button onclick="closeQuickLogModal()"
+        class="flex-1 bg-white border border-slate-200 text-slate-600 py-3 rounded-xl text-[13px] font-bold hover:bg-slate-50 transition-all">Cancel</button>
+      <button onclick="submitModalLog()"
+        class="flex-[2] bg-slate-900 text-white py-3 rounded-xl text-[13px] font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-900/20">
         <i class="fa-solid fa-cloud-arrow-up"></i> Commit Entry
       </button>
     </div>
@@ -574,11 +578,27 @@
           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 font-medium transition-all">
       </div>
       <div>
-        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">IP Address <span class="text-slate-300 font-normal">(optional)</span></label>
+        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">IP Address <span
+            class="text-slate-300 font-normal">(optional)</span></label>
         <input type="text" id="as-ip" placeholder="e.g. 192.168.1.10"
           class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 font-mono transition-all">
       </div>
-      <div id="as-error" class="hidden text-[11px] text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
+      {% if request.user.developer.role == 'manager' or request.user.developer.role == 'tl' %}
+      <div>
+        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Assign Owner</label>
+        <select id="as-owner"
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 font-medium transition-all">
+          <option value="{{ request.user.id }}">Myself (@{{ request.user.username }})</option>
+          {% for member in team_members %}
+          {% if member.user.id != request.user.id %}
+          <option value="{{ member.user.id }}">{{ member.user.get_full_name|default:member.user.username }} (@{{ member.user.username }})</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+      <div id="as-error"
+        class="hidden text-[11px] text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2">
         <i class="fa-solid fa-circle-exclamation mr-1"></i><span id="as-error-msg"></span>
       </div>
     </form>
@@ -596,6 +616,60 @@
   </div>
 </div>
 
+<!-- REASSIGN SERVER MODAL -->
+<div id="reassign-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+  <div class="bg-white rounded-3xl w-full max-w-md relative z-10 shadow-2xl border border-slate-100 overflow-hidden">
+    <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+          <i class="fa-solid fa-user-gear text-lg"></i>
+        </div>
+        <div>
+          <h3 class="text-lg font-bold text-slate-900">Reassign Owner</h3>
+          <p class="text-[11px] text-slate-500">Transfer ownership of <span id="reassign-server-name"
+              class="font-bold text-slate-700"></span></p>
+        </div>
+      </div>
+      <button onclick="closeReassignModal()"
+        class="w-8 h-8 rounded-xl hover:bg-white hover:shadow-md flex items-center justify-center text-slate-400 transition-all">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+
+    <div class="p-6 space-y-4">
+      <input type="hidden" id="reassign-server-id">
+      <div>
+        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Select New
+          Owner</label>
+        <select id="reassign-owner"
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 font-medium transition-all">
+          <option value="{{ request.user.id }}">Myself (@{{ request.user.username }})</option>
+          {% for member in team_members %}
+          {% if member.user.id != request.user.id %}
+          <option value="{{ member.user.id }}">{{ member.user.get_full_name|default:member.user.username }} (@{{ member.user.username }})</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </div>
+
+      <div id="reassign-error"
+        class="hidden p-3 rounded-xl bg-rose-50 border border-rose-100 flex items-center gap-2.5 text-rose-600 text-xs font-medium">
+        <i class="fa-solid fa-circle-exclamation text-rose-400"></i>
+        <span id="reassign-error-msg"></span>
+      </div>
+    </div>
+
+    <div class="p-6 bg-slate-50/80 border-t border-slate-100 flex gap-3">
+      <button onclick="closeReassignModal()"
+        class="flex-1 py-2.5 text-[12px] font-bold text-slate-500 hover:text-slate-700 transition-colors">Cancel</button>
+      <button onclick="submitReassign()"
+        class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-[12px] font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95">Transfer
+        Ownership</button>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block extra_scripts %}
@@ -603,63 +677,61 @@
   const TASKS = {{ task_data_json| safe }};
   let currentModalStatus = 'done';
 
+  // Delete server — uses a single hidden form so no <form> lives inside flex card headers
+  function confirmDeleteServer(serverId, serverName) {
+    if (!confirm('Remove ' + serverName + '? This cannot be undone.')) return;
+    const form = document.getElementById('delete-server-form');
+    form.action = '/server/' + serverId + '/delete/';
+    form.submit();
+  }
+
   // Section Switching Logic
   function showSection(name) {
     document.querySelectorAll('.page-section').forEach(s => s.classList.add('hidden'));
-    document.getElementById('page-' + name).classList.remove('hidden');
+    const target = document.getElementById('page-' + name);
+    if (!target) return;
+    target.classList.remove('hidden');
 
     // Update Sidebar Active State
     document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
-    // Find the link that matches
-    const links = document.querySelectorAll('.nav-link');
-    links.forEach(l => {
-      if (l.getAttribute('href').includes('#' + name)) l.classList.add('active');
+    document.querySelectorAll('.nav-link').forEach(l => {
+      if (l.getAttribute('href') && l.getAttribute('href').includes('#' + name)) l.classList.add('active');
       if (name === 'dash' && l.getAttribute('href') === '{% url "dashboard" %}') l.classList.add('active');
     });
 
     // Update Header
-    const titles = { dash: 'Console Overview', tasks: 'My Checklist', team: 'Team Overview', log: 'Activity Log', analytics: 'Analytics', settings: 'Settings' };
+    const titles = { dash: 'Console Overview', team: 'Team Overview', log: 'Activity Log', analytics: 'Analytics', settings: 'Settings' };
     const h2 = document.querySelector('header h2');
     if (h2) h2.textContent = titles[name] || 'Dashboard';
 
     // Handle hash in URL without reload
     window.history.pushState(null, null, name === 'dash' ? '{% url "dashboard" %}' : '#' + name);
   }
+  // Expose globally so base.html sidebar onclick can always reach it
+  window.showSection = showSection;
 
-  // Handle URL Hash on load
-  window.addEventListener('load', () => {
+  // ── Handle URL hash immediately (runs after showSection is defined) ──
+  (function() {
     const hash = window.location.hash.replace('#', '');
     if (hash && document.getElementById('page-' + hash)) {
       showSection(hash);
     }
+  })();
+
+  // ── Intercept nav-link clicks when already on the dashboard ──
+  document.querySelectorAll('.nav-link').forEach(function(link) {
+    link.addEventListener('click', function(e) {
+      var href = link.getAttribute('href') || '';
+      if (href.includes('#')) {
+        var section = href.split('#')[1];
+        if (section && document.getElementById('page-' + section)) {
+          e.preventDefault();
+          showSection(section);
+        }
+      }
+    });
   });
 
-  // Task Tab Logic
-  function switchTaskTab(cat) {
-    document.querySelectorAll('.task-list-container').forEach(l => l.classList.add('hidden'));
-    document.getElementById('list-' + cat).classList.remove('hidden');
-
-    document.querySelectorAll('.task-tab').forEach(t => {
-      t.classList.remove('active', 'bg-blue-50', 'text-blue-600', 'font-bold');
-      t.classList.add('text-slate-500', 'font-medium', 'hover:bg-slate-100');
-    });
-
-    const activeBtn = document.getElementById('tab-' + cat);
-    activeBtn.classList.add('active', 'bg-blue-50', 'text-blue-600', 'font-bold');
-    activeBtn.classList.remove('text-slate-500', 'font-medium', 'hover:bg-slate-100');
-  }
-
-  // Task Toggling
-  async function toggleTask(taskId, el) {
-    const isDone = el.classList.contains('bg-slate-900');
-    if (isDone) {
-      // Unchecking (resetting to WIP) does not require fields
-      updateTaskStatus(taskId, 'wip');
-    } else {
-      // Marking as DONE requires fields
-      openNoteModal(taskId);
-    }
-  }
 
   async function updateTaskStatus(taskId, status) {
     const resp = await fetch('{% url "log_task" %}', {
@@ -694,7 +766,7 @@
     const active = document.getElementById('mc-' + cat);
     active.classList.add('bg-white', 'text-slate-900', 'shadow-sm', 'font-bold');
     active.classList.remove('text-slate-500', 'font-medium');
-    
+
     refreshModalTasks();
     renderDynamicFields();
   }
@@ -714,6 +786,12 @@
     refreshModalTasks();
     document.getElementById('modal-task').value = taskId;
     renderDynamicFields();
+
+    // Auto-focus the first dynamic field if it exists
+    setTimeout(() => {
+      const firstInput = document.querySelector('.dynamic-input, #modal-remarks');
+      if (firstInput) firstInput.focus();
+    }, 200);
   }
 
   function closeQuickLogModal() {
@@ -781,6 +859,26 @@
     }).join('');
   }
 
+  // --- EASY FILL ENHANCEMENT (DELEGATED) ---
+  document.getElementById('ql-modal').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') {
+      const target = e.target;
+      if (target.classList.contains('dynamic-input') || target.id === 'modal-remarks') {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const qlInputs = Array.from(this.querySelectorAll('.dynamic-input, #modal-remarks'));
+        const index = qlInputs.indexOf(target);
+
+        if (index > -1 && index < qlInputs.length - 1) {
+          qlInputs[index + 1].focus();
+        } else if (index === qlInputs.length - 1) {
+          submitModalLog();
+        }
+      }
+    }
+  });
+
   function setModalStatus(status) {
     currentModalStatus = status;
     document.querySelectorAll('.modal-status-btn').forEach(btn => {
@@ -798,7 +896,7 @@
     const taskId = document.getElementById('modal-task').value;
     const serverId = document.getElementById('modal-server').value;
     const notes = document.getElementById('modal-notes').value;
-    
+
     const fieldsData = {};
     document.querySelectorAll('.dynamic-input').forEach(input => {
       fieldsData[input.getAttribute('data-field')] = input.value;
@@ -807,10 +905,10 @@
     const resp = await fetch('{% url "log_task" %}', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body: JSON.stringify({ 
-        task_id: taskId, 
+      body: JSON.stringify({
+        task_id: taskId,
         server_id: serverId,
-        status: currentModalStatus, 
+        status: currentModalStatus,
         notes: notes,
         fields_data: fieldsData
       })
@@ -839,74 +937,19 @@
 
   // ── CHARTS ────────────────────────────────────────────────────
   function initCharts() {
-    const serverData = [
-      {% for s in servers %}
-      { name: "{{ s.name }}", d: {{ s.daily_pct }}, w: {{ s.weekly_pct }}, m: {{ s.monthly_pct }} },
-      {% endfor %}
-    ];
-
-    // 1. Compliance Wheel (Doughnut)
-    const ctxC = document.getElementById('complianceChart').getContext('2d');
-    new Chart(ctxC, {
-      type: 'doughnut',
-      data: {
-        labels: ['Fully Verified', 'In Progress', 'Pending'],
-        datasets: [{
-          data: [{{ compliance.full }}, {{ compliance.partial }}, {{ compliance.none }}],
-          backgroundColor: ['#10b981', '#3b82f6', '#e2e8f0'],
-          borderWidth: 0,
-          cutout: '78%',
-          spacing: 3
-        }]
-      },
-      options: {
-        plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ` ${c.label}: ${c.raw}` } } },
-        maintainAspectRatio: false,
-        animation: { duration: 1600, easing: 'easeOutQuart' }
-      }
-    });
-
-    // 2. Grouped R&R Bar Chart (D / W / M per server)
-    const ctxM = document.getElementById('managementChart').getContext('2d');
-    const dGrad = ctxM.createLinearGradient(0, 0, 500, 0);
-    dGrad.addColorStop(0, '#3b82f6'); dGrad.addColorStop(1, '#6366f1');
-    const wGrad = ctxM.createLinearGradient(0, 0, 500, 0);
-    wGrad.addColorStop(0, '#10b981'); wGrad.addColorStop(1, '#34d399');
-    const mGrad = ctxM.createLinearGradient(0, 0, 500, 0);
-    mGrad.addColorStop(0, '#f59e0b'); mGrad.addColorStop(1, '#fbbf24');
-
-    new Chart(ctxM, {
-      type: 'bar',
-      data: {
-        labels: serverData.map(s => s.name),
-        datasets: [
-          { label: 'Daily',   data: serverData.map(s => s.d), backgroundColor: dGrad, borderRadius: 4, barPercentage: 0.75, categoryPercentage: 0.65 },
-          { label: 'Weekly',  data: serverData.map(s => s.w), backgroundColor: wGrad, borderRadius: 4, barPercentage: 0.75, categoryPercentage: 0.65 },
-          { label: 'Monthly', data: serverData.map(s => s.m), backgroundColor: mGrad, borderRadius: 4, barPercentage: 0.75, categoryPercentage: 0.65 }
-        ]
-      },
-      options: {
-        indexAxis: 'y',
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${c.raw}%` } }
-        },
-        maintainAspectRatio: false,
-        animation: { duration: 1400, easing: 'easeOutExpo' },
-        scales: {
-          x: { beginAtZero: true, max: 100, grid: { color: '#f1f5f9' }, ticks: { font: { size: 10, weight: '600' }, color: '#94a3b8', callback: v => v + '%' } },
-          y: { grid: { display: false }, ticks: { font: { size: 11, weight: 'bold' }, color: '#334155' } }
-        }
-      }
-    });
+    const serverNames = [{% for s in servers %} "{{ s.name }}", {% endfor %}];
+    const dailyData = [{% for s in servers %}{{ s.daily_pct }}, {% endfor %}];
+    const weeklyData = [{% for s in servers %}{{ s.weekly_pct }}, {% endfor %}];
+    const monthlyData = [{% for s in servers %}{{ s.monthly_pct }}, {% endfor %}];
   }
+
 
   document.addEventListener('DOMContentLoaded', () => {
     initCharts();
     // Auto-load first server's logs
     {% if servers %}
     loadServerLog({{ servers.0.id }}, '{{ servers.0.name }}');
-    {% endif %}
+  {% endif %}
   });
 
   // ── PER-SERVER LOG TABS ────────────────────────────────────────
@@ -985,15 +1028,36 @@
     });
   }
 
+  function filterLogs() {
+    const serverVal = document.getElementById('log-server-filter').value;
+    const userVal = document.getElementById('log-user-filter').value;
+    const rows = document.querySelectorAll('.log-row');
+
+    rows.forEach(row => {
+      const matchS = (serverVal === 'all' || row.getAttribute('data-server') === serverVal);
+      const matchU = (userVal === 'all' || row.getAttribute('data-user') === userVal);
+
+      if (matchS && matchU) {
+        row.style.display = 'table-row';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  }
+
+  function viewUserDetails(userId) {
+    window.location.href = `{% url 'task_log_filter' %}?developer_id=${userId}`;
+  }
+
   function filterByStatus(status) {
     const cards = document.querySelectorAll('.server-card');
     const btns = document.querySelectorAll('.status-btn');
-    
+
     btns.forEach(btn => {
       btn.classList.remove('bg-white', 'text-slate-900', 'shadow-sm');
       btn.classList.add('text-slate-500');
     });
-    
+
     event.currentTarget.classList.add('bg-white', 'text-slate-900', 'shadow-sm');
     event.currentTarget.classList.remove('text-slate-500');
 
@@ -1006,6 +1070,39 @@
     });
   }
 
+  let activeComplianceFilter = null;
+  function filterCompliance(level) {
+    const cards = document.querySelectorAll('.server-card');
+
+    // reset other filters to prevent confusion
+    document.getElementById('server-search').value = '';
+
+    if (level === 'all' || activeComplianceFilter === level) {
+      activeComplianceFilter = null;
+      document.querySelectorAll('.comp-btn').forEach(btn => {
+        btn.classList.remove('ring-2', 'ring-offset-2', 'ring-slate-400');
+      });
+      cards.forEach(card => card.style.display = 'block');
+      return;
+    }
+
+    activeComplianceFilter = level;
+    document.querySelectorAll('.comp-btn').forEach(btn => {
+      btn.classList.remove('ring-2', 'ring-offset-2', 'ring-slate-400');
+    });
+
+    if (event && event.currentTarget && event.currentTarget.classList.contains('comp-btn')) {
+      event.currentTarget.classList.add('ring-2', 'ring-offset-2', 'ring-slate-400');
+    }
+
+    cards.forEach(card => {
+      if (card.getAttribute('data-compliance') === level) {
+        card.style.display = 'block';
+      } else {
+        card.style.display = 'none';
+      }
+    });
+  }
   // Global Access
   window.openQL = openQuickLog;
 
@@ -1024,7 +1121,9 @@
 
   async function submitAddServer() {
     const name = document.getElementById('as-name').value.trim();
-    const ip   = document.getElementById('as-ip').value.trim();
+    const ip = document.getElementById('as-ip').value.trim();
+    const ownerEl = document.getElementById('as-owner');
+    const owner_id = ownerEl ? ownerEl.value : null;
 
     if (!name) {
       document.getElementById('as-error-msg').textContent = 'Server name is required.';
@@ -1035,7 +1134,7 @@
     const resp = await fetch('{% url "create_server" %}', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body: JSON.stringify({ name, ip_address: ip })
+      body: JSON.stringify({ name, ip_address: ip, owner_id })
     });
 
     const data = await resp.json();
@@ -1049,9 +1148,63 @@
     }
   }
 
+  // ── REASSIGN SERVER ──────────────────────────────────────────
+  function openReassignModal(serverId, serverName, currentOwnerId) {
+    document.getElementById('reassign-server-id').value = serverId;
+    document.getElementById('reassign-server-name').textContent = serverName;
+    document.getElementById('reassign-error').classList.add('hidden');
+    
+    // Hide the current owner from the dropdown
+    const select = document.getElementById('reassign-owner');
+    let firstVisible = -1;
+    
+    Array.from(select.options).forEach((opt, idx) => {
+      if (opt.value == currentOwnerId) {
+        opt.style.display = 'none';
+        opt.disabled = true;
+      } else {
+        opt.style.display = 'block';
+        opt.disabled = false;
+        if (firstVisible === -1) firstVisible = idx;
+      }
+    });
+
+    // Auto-select the first available person who ISN'T the current owner
+    if (firstVisible !== -1) {
+      select.selectedIndex = firstVisible;
+    }
+
+    document.getElementById('reassign-modal').classList.remove('hidden');
+  }
+
+  function closeReassignModal() {
+    document.getElementById('reassign-modal').classList.add('hidden');
+  }
+
+  async function submitReassign() {
+    const serverId = document.getElementById('reassign-server-id').value;
+    const ownerId = document.getElementById('reassign-owner').value;
+
+    const resp = await fetch(`/api/server/${serverId}/reassign/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ owner_id: ownerId })
+    });
+
+    const data = await resp.json();
+    if (data.success) {
+      toast('🔄 Server ownership transferred!');
+      closeReassignModal();
+      setTimeout(() => location.reload(), 800);
+    } else {
+      document.getElementById('reassign-error-msg').textContent = data.error || 'Failed to reassign server.';
+      document.getElementById('reassign-error').classList.remove('hidden');
+    }
+  }
+
   // Close modal on backdrop click
-  document.getElementById('add-server-modal').addEventListener('click', function(e) {
-    if (e.target === this) closeAddServerModal();
+  document.getElementById('reassign-modal').addEventListener('click', function (e) {
+    if (e.target === this) closeReassignModal();
   });
 
 </script>

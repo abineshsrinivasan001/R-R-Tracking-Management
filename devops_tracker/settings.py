@@ -2,6 +2,7 @@
 Django settings for DevOps R&R Tracker
 """
 from pathlib import Path
+import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -54,9 +55,12 @@ WSGI_APPLICATION = 'devops_tracker.wsgi.application'
 # PostgreSQL Database Configuration
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-        
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DB_NAME', 'rr_tracker'),
+        'USER': os.getenv('DB_USER', 'postgres'),
+        'PASSWORD': os.getenv('DB_PASSWORD', 'Welcome123'),
+        'HOST': os.getenv('DB_HOST', '172.18.208.149'),
+        'PORT': os.getenv('DB_PORT', '5432'),
     }
 }
 
@@ -80,3 +84,4 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
+SESSION_COOKIE_AGE = 86400  # 1 Day in seconds
