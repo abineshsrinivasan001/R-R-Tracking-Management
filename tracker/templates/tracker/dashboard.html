@@ -1,168 +1,317 @@
 {% extends 'tracker/base.html' %}
 {% load tracker_tags %}
+{% load static %}
 
-{% block header_title %}Console Overview{% endblock %}
+{% block header_title %}Server Management{% endblock %}
+{% block header_subtitle %}Monitor, Manage and Maintain Your Infrastructure{% endblock %}
 
 {% block content %}
 
-<!-- NAVIGATION TABS (Hidden, controlled by sidebar and JS) -->
 <div id="page-dash" class="page-section">
-  <!-- DASHBOARD HERO -->
-  <div class="bg-navy-900 rounded-2xl p-6 mb-6 relative overflow-hidden border border-white/5">
-    <div class="absolute -top-[50px] -right-[50px] w-[200px] h-[200px] rounded-full bg-blue-500/5 pointer-events-none">
-    </div>
-    <div
-      class="absolute -bottom-[40px] right-[90px] w-[150px] h-[150px] rounded-full bg-blue-500/10 pointer-events-none">
+
+  <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <div>
+        <h2 class="text-[15px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
+          <span>Server Fleet</span>
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">{{ servers|length }} Total</span>
+        </h2>
+      </div>
     </div>
 
-    <div class="relative z-10 flex items-center justify-between flex-wrap gap-3.5">
-      <div>
-        <div class="text-blue-300 text-[11px] font-bold tracking-widest uppercase mb-1.5"></div>
-        <div class="text-white display text-[20px] font-bold mb-1.5">Today's Completion: <span class="text-blue-400">{{ daily_pct }}%</span></div>
-        <div class="text-slate-400 text-[13px]">{{ daily_done }} of {{ daily_total }} daily tasks done · {{ daily_total|subtract:daily_done }} remaining</div>
+    <!-- Right: Global Actions (Clean, Unwrapped, Uniform Height) -->
+    <div class="flex items-center gap-2 flex-wrap">
+      <!-- Trigger Daily Check on Important Servers -->
+      <button id="btn-run-important-checks" onclick="runAllServersCheck(true)"
+        class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 hover:border-amber-400 transition-all shadow-2xs whitespace-nowrap cursor-pointer"
+        title="Trigger automated health check on Important servers only">
+        <i id="important-check-spinner" class="fa-solid fa-star text-amber-500 text-xs"></i>
+        <span id="important-check-text">Check Important{% if important_servers_count %} ({{ important_servers_count }}){% endif %}</span>
+      </button>
+
+      <!-- Main Trigger: Run All Server Checks -->
+      <button id="btn-run-all-checks" onclick="runAllServersCheck(false)"
+        class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 transition-all shadow-2xs whitespace-nowrap cursor-pointer"
+        title="Trigger automated health check across all registered servers">
+        <i id="all-check-spinner" class="fa-solid fa-rotate text-emerald-600 text-xs"></i>
+        <span id="all-check-text">Check All Fleet ({{ servers|length }})</span>
+      </button>
+
+      <!-- SOP Procedure -->
+      <button onclick="openMaintenanceModal()"
+        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-2xs whitespace-nowrap cursor-pointer"
+        title="Server Maintenance Standard Operating Procedure">
+        <i class="fa-regular fa-file-pdf text-indigo-500 text-xs"></i>
+        <span>Procedure</span>
+      </button>
+
+      <!-- Quick Log -->
+      <button onclick="openQuickLog()"
+        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-amber-600 hover:border-amber-200 transition-all shadow-2xs whitespace-nowrap cursor-pointer"
+        title="Quick Task Verification Log">
+        <i class="fa-solid fa-bolt text-amber-500 text-xs"></i>
+        <span>Quick Log</span>
+      </button>
+
+      <!-- Add Server (Primary CTA) -->
+      <button onclick="openAddServerModal()"
+        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-xs whitespace-nowrap cursor-pointer"
+        title="Add New Server">
+        <i class="fa-solid fa-plus text-[11px]"></i>
+        <span>Add Server</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 5 KPI STAT CARDS (REAL DATA ONLY - SLEEK PRODUCTION STANDARD) -->
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 mb-6">
+    <!-- Card 1: Total Servers -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-3.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-md hover:border-blue-100 transition-all duration-200 flex items-center gap-3.5">
+      <div class="w-11 h-11 rounded-2xl bg-[#edf5ff] flex items-center justify-center flex-shrink-0 text-[#2563eb]">
+        <svg viewBox="0 0 24 24" class="w-6 h-6" fill="currentColor">
+          <path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5zm3 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm10 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM4 11a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2zm3 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm10 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM4 17a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2zm3 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm10 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
+        </svg>
       </div>
-      <div class="flex gap-2.5 flex-wrap">
-        <div class="bg-white/10 rounded-xl px-4 py-3 text-center min-w-[75px] border border-white/5">
-          <div class="text-white display text-2xl font-bold">{{ daily_done }}</div>
-          <div class="text-slate-400 text-[11px] mt-0.5 uppercase tracking-wider font-semibold">Done</div>
+      <div class="flex-1 min-w-0">
+        <div class="text-[12px] font-semibold text-slate-500 leading-none truncate">Total Servers</div>
+        <div class="flex items-center gap-2 mt-1.5">
+          <span class="text-[22px] font-bold text-slate-900 leading-none tracking-tight">{{ total_servers_count }}</span>
+          <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-[#e6f9f0] text-[#10b981]">
+            <i class="fa-solid fa-arrow-trend-up text-[9px]"></i> 0%
+          </span>
         </div>
-        <div class="bg-white/10 rounded-xl px-4 py-3 text-center min-w-[75px] border border-white/5">
-          <div class="text-amber-400 display text-2xl font-bold">{{ daily_total|subtract:daily_done }}</div>
-          <div class="text-slate-400 text-[11px] mt-0.5 uppercase tracking-wider font-semibold">Pending</div>
+        <div class="text-[11px] text-slate-400 font-normal leading-none mt-1.5 truncate">Across all environments</div>
+      </div>
+    </div>
+
+    <!-- Card 2: Operational -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-3.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-md hover:border-emerald-100 transition-all duration-200 flex items-center gap-3.5">
+      <div class="w-11 h-11 rounded-2xl bg-[#eafaf1] flex items-center justify-center flex-shrink-0">
+        <div class="w-6 h-6 rounded-full bg-[#10b981] flex items-center justify-center text-white text-[11px] shadow-xs">
+          <i class="fa-solid fa-check"></i>
         </div>
-        <div class="bg-white/10 rounded-xl px-4 py-3 text-center min-w-[75px] border border-white/5">
-          <div class="text-emerald-400 display text-2xl font-bold">{{ streak }}</div>
-          <div class="text-slate-400 text-[11px] mt-0.5 uppercase tracking-wider font-semibold">🔥 Streak</div>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="text-[12px] font-semibold text-slate-500 leading-none truncate">Operational</div>
+        <div class="flex items-center gap-2 mt-1.5">
+          <span class="text-[22px] font-bold text-slate-900 leading-none tracking-tight">{{ operational_servers_count }}</span>
+          <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-[#e6f9f0] text-[#10b981]">
+            <i class="fa-solid fa-arrow-up text-[9px]"></i> {{ operational_pct }}%
+          </span>
+        </div>
+        <div class="text-[11px] text-slate-400 font-normal leading-none mt-1.5 truncate">Running normally</div>
+      </div>
+    </div>
+
+    <!-- Card 3: Critical -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-3.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-md hover:border-rose-100 transition-all duration-200 flex items-center gap-3.5">
+      <div class="w-11 h-11 rounded-2xl bg-[#feecee] flex items-center justify-center flex-shrink-0">
+        <div class="w-6 h-6 rounded-full bg-[#ef4444] flex items-center justify-center text-white text-[11px] font-bold shadow-xs">
+          <i class="fa-solid fa-exclamation"></i>
+        </div>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="text-[12px] font-semibold text-slate-500 leading-none truncate">Critical</div>
+        <div class="flex items-center gap-2 mt-1.5">
+          <span class="text-[22px] font-bold {% if critical_servers_count > 0 %}text-[#ef4444]{% else %}text-slate-900{% endif %} leading-none tracking-tight">{{ critical_servers_count }}</span>
+          <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10.5px] font-bold {% if critical_servers_count > 0 %}bg-[#feecee] text-[#ef4444]{% else %}bg-slate-100 text-slate-600{% endif %}">
+            <i class="fa-solid fa-arrow-down text-[9px]"></i> {{ critical_pct }}%
+          </span>
+        </div>
+        <div class="text-[11px] text-slate-400 font-normal leading-none mt-1.5 truncate">Requires attention</div>
+      </div>
+    </div>
+
+    <!-- Card 4: Tasks Completion -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-3.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-md hover:border-indigo-100 transition-all duration-200 flex items-center gap-3.5">
+      <div class="w-11 h-11 rounded-2xl bg-[#edf5ff] flex items-center justify-center flex-shrink-0 text-[#2563eb]">
+        <svg viewBox="0 0 24 24" class="w-6 h-6" fill="currentColor">
+          <circle cx="5" cy="7" r="1.5" />
+          <path d="M9 6h11a1 1 0 0 1 0 2H9a1 1 0 0 1 0-2z" />
+          <circle cx="5" cy="12" r="1.5" />
+          <path d="M9 11h11a1 1 0 0 1 0 2H9a1 1 0 0 1 0-2z" />
+          <circle cx="5" cy="17" r="1.5" />
+          <path d="M9 16h11a1 1 0 0 1 0 2H9a1 1 0 0 1 0-2z" />
+        </svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="text-[12px] font-semibold text-slate-500 leading-none truncate">Tasks Completion</div>
+        <div class="flex items-center gap-2 mt-1.5">
+          <span class="text-[20px] font-bold text-slate-900 leading-none tracking-tight">{{ weekly_imp_tasks_done }}/{{ weekly_imp_tasks_total }}</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-[#e6f9f0] text-[#10b981]">
+            {{ weekly_imp_tasks_pct }}%
+          </span>
+        </div>
+        <div class="w-full h-1.5 bg-[#f1f5f9] rounded-full overflow-hidden mt-2">
+          <div class="h-full bg-[#10b981] rounded-full transition-all duration-500" style="width: {{ weekly_imp_tasks_pct }}%"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 5: Last Updated -->
+    <div class="bg-white rounded-2xl border border-slate-100 p-3.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-md hover:border-purple-100 transition-all duration-200 flex items-center gap-3.5">
+      <div class="w-11 h-11 rounded-2xl bg-[#f5eefc] flex items-center justify-center flex-shrink-0 text-[#8b5cf6]">
+        <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9" />
+          <polyline points="12 7 12 12 15 15" />
+        </svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <div class="text-[12px] font-semibold text-slate-500 leading-none truncate">Last Updated</div>
+        <div class="mt-1.5">
+          <span class="text-[14.5px] font-bold text-slate-900 leading-none tracking-tight block truncate">{{ last_updated_time }}</span>
+        </div>
+        <div class="flex items-center gap-1.5 mt-2 text-[11px] font-medium text-slate-600">
+          <span class="w-2 h-2 rounded-full bg-[#10b981]"></span>
+          <span>Live Monitoring</span>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- MANAGEMENT OVERVIEW (Balanced Size) -->
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-    <div class="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-4 shadow-sm">
-      <div class="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600">
-        <i class="fa-solid fa-server text-lg"></i>
+  <!-- SEARCH & FILTER TOOLBAR -->
+  <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-2xs">
+    <div class="flex items-center gap-3 flex-wrap flex-1">
+      <!-- Search Input -->
+      <div class="relative min-w-[220px] max-w-xs flex-1 group">
+        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs group-focus-within:text-emerald-500 transition-colors"></i>
+        <input type="text" id="server-search" placeholder="Search IP or hostname..." autocomplete="off"
+          readonly onfocus="this.removeAttribute('readonly');"
+          class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all cursor-text placeholder:text-slate-400"
+          onkeyup="filterServers()">
       </div>
-      <div>
-        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Total Servers</div>
-        <div class="text-[16px] font-bold text-slate-800 leading-tight">{{ servers|length }} Managed</div>
+
+      <!-- Status Filter Tabs -->
+      <div class="inline-flex p-0.5 bg-slate-100 rounded-lg border border-slate-200/80">
+        <button onclick="filterByStatus('all')"
+          class="status-btn active px-3 py-1 text-xs font-semibold rounded-md transition-all bg-white text-slate-900 shadow-2xs">All</button>
+        <button onclick="filterByStatus('starred')"
+          class="status-btn px-3 py-1 text-xs font-semibold rounded-md transition-all text-slate-500 hover:text-slate-800 flex items-center gap-1.5">
+          <i class="fa-solid fa-star text-amber-400 text-[10px]"></i>Starred
+        </button>
+        <button onclick="filterByStatus('up')"
+          class="status-btn px-3 py-1 text-xs font-semibold rounded-md transition-all text-slate-500 hover:text-slate-800">Online</button>
+        <button onclick="filterByStatus('down')"
+          class="status-btn px-3 py-1 text-xs font-semibold rounded-md transition-all text-slate-500 hover:text-slate-800">Critical</button>
       </div>
     </div>
 
-    <div class="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-4 shadow-sm">
-      <div class="w-11 h-11 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-        <i class="fa-solid fa-calendar-day text-lg"></i>
-      </div>
-      <div>
-        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Today's Tasks</div>
-        <div class="text-[16px] font-bold text-slate-800 leading-tight">{{ daily_done }}/{{ daily_total }} Done</div>
-      </div>
-    </div>
-
-    <div class="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-4 shadow-sm">
-      <div class="w-11 h-11 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
-        <i class="fa-solid fa-calendar-week text-lg"></i>
-      </div>
-      <div>
-        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Weekly Progress</div>
-        <div class="text-[16px] font-bold text-slate-800 leading-tight">{{ weekly_pct }}% Overall</div>
-      </div>
-    </div>
-
-    <div class="bg-white rounded-2xl border border-slate-200 p-4 flex items-center gap-4 shadow-sm">
-      <div class="w-11 h-11 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
-        <i class="fa-solid fa-fire text-lg"></i>
-      </div>
-      <div>
-        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Current Streak</div>
-        <div class="text-[16px] font-bold text-slate-800 leading-tight">{{ streak }} Days</div>
-      </div>
+    <!-- Sort Dropdown on the Right -->
+    <div class="flex items-center gap-2 self-end md:self-auto border-t md:border-t-0 pt-2 md:pt-0 border-slate-100">
+      <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Sort:</span>
+      <select id="server-sort" onchange="sortServers()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500 cursor-pointer">
+        <option value="important">Important First</option>
+        <option value="recent">Recent Activity</option>
+        <option value="name">Name (A-Z)</option>
+      </select>
     </div>
   </div>
 
-  <!-- INFRASTRUCTURE HUB -->
   <div class="mb-8">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-5">
-      <div>
-        <h3 class="display text-[18px] font-bold text-slate-900">Your Managed Servers</h3>
-        <p class="text-[12px] text-slate-500">Manage and verify checklists across <span
-            class="font-bold text-slate-700">{{ servers|length }}</span> active servers</p>
-      </div>
-
-      <div class="flex items-center gap-3">
-        <div class="relative group">
-          <i
-            class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs group-focus-within:text-blue-500 transition-colors"></i>
-          <input type="text" id="server-search" placeholder="Search IP or hostname..."
-            class="bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-[12px] focus:outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/5 w-64 transition-all"
-            onkeyup="filterServers()">
-        </div>
-        <div class="flex bg-slate-200/50 p-1 rounded-xl border border-slate-200/60">
-          <button onclick="filterByStatus('all')"
-            class="status-btn active px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all bg-white text-slate-900 shadow-sm">All</button>
-          <button onclick="filterByStatus('up')"
-            class="status-btn px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all text-slate-500 hover:text-slate-700">Online</button>
-          <button onclick="filterByStatus('down')"
-            class="status-btn px-3 py-1.5 text-[10px] font-bold rounded-lg transition-all text-slate-500 hover:text-slate-700">Critical</button>
-        </div>
-      </div>
-    </div>
-
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="server-grid">
       {% for server in servers %}
       <div
-        class="server-card bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-lg hover:border-blue-200 transition-all group"
-        data-name="{{ server.name|lower }}" data-ip="{{ server.ip|lower }}" data-status="{{ server.status }}"
+        class="server-card relative bg-white rounded-2xl border overflow-hidden transition-all group cursor-pointer shadow-sm {% if server.is_important %}border-emerald-400{% else %}border-slate-200 hover:shadow-lg hover:border-emerald-200{% endif %}"
+        data-id="{{ server.id }}" data-name="{{ server.name|lower }}" data-ip="{{ server.ip|lower }}" data-status="{{ server.status }}"
+        data-important="{{ server.is_important|yesno:'true,false' }}" data-last-active="{{ server.last_activity_dt|date:'U'|default:'0' }}"
+        ondblclick="toggleImportantServer('{{ server.id }}')" title="Double-click to mark as important"
+        data-port="{{ server.port_number }}" data-username="{{ server.username }}" data-password="{{ server.server_password }}"
         data-compliance="{% if server.daily_pct == 100 %}full{% elif server.daily_pct > 0 %}partial{% else %}none{% endif %}">
-        <div class="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+        
+        <div id="ribbon-{{ server.id }}" class="absolute top-0 left-0 w-20 h-20 overflow-hidden pointer-events-none z-0 {% if not server.is_important %}hidden{% endif %}">
+          <div class="absolute bg-gradient-to-r from-emerald-600 to-emerald-400 text-white py-1.5 w-[120px] flex items-center justify-center -left-[30px] top-[16px] -rotate-45 shadow-md border-b border-emerald-300/50">
+          </div>
+        </div>
+
+        <div id="card-header-{{ server.id }}" class="p-4 border-b {% if server.is_important %}border-emerald-200{% else %}border-slate-100{% endif %} bg-slate-50/50 flex items-center justify-between relative z-10">
           <div class="flex items-center gap-3">
             <div
-              class="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white text-sm shadow-md transition-all">
-              <i class="fa-solid fa-server"></i>
+              class="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center transition-all shadow-sm" id="server-icon-bg-{{ server.id }}">
+              <svg viewBox="0 0 100 100" class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
+                <!-- Top trapezoid -->
+                <path d="M 25 12 L 75 12 L 88 28 L 12 28 Z" />
+                
+                <!-- Tier 1 -->
+                <rect x="5" y="28" width="90" height="22" rx="8" />
+                <circle cx="22" cy="39" r="3" />
+                <line x1="45" y1="34" x2="80" y2="34" />
+                <line x1="45" y1="44" x2="80" y2="44" />
+
+                <!-- Tier 2 -->
+                <rect x="5" y="52" width="90" height="22" rx="8" />
+                <circle cx="22" cy="63" r="3" />
+                <line x1="45" y1="58" x2="80" y2="58" />
+                <line x1="45" y1="68" x2="80" y2="68" />
+
+                <!-- Tier 3 -->
+                <rect x="5" y="76" width="90" height="22" rx="8" />
+                <circle cx="22" cy="87" r="3" />
+                <line x1="45" y1="82" x2="80" y2="82" />
+                <line x1="45" y1="92" x2="80" y2="92" />
+              </svg>
             </div>
-            <div class="overflow-hidden">
-              <div class="text-[15px] font-bold text-slate-900 leading-tight truncate">{{ server.name }}</div>
-              <div class="text-[10px] text-slate-400 font-medium font-mono mt-0.5">{{ server.ip }}</div>
+            <div class="overflow-hidden flex items-center gap-2">
+              <div class="flex-col">
+                <div class="text-[13px] font-bold text-slate-900 leading-tight truncate flex items-center gap-1.5">
+                  {{ server.ip }}
+                </div>
+                <div class="text-[11px] text-slate-400 font-medium mt-0.5 truncate">{{ server.name }}</div>
+              </div>
             </div>
           </div>
-          {% if viewer_role == 'manager' or viewer_role == 'tl' %}
           <div class="flex items-center gap-1.5">
-            <button onclick="openReassignModal('{{ server.id }}', '{{ server.name }}', '{{ server.owner.id }}')"
-              class="text-slate-400 hover:text-blue-500 transition-colors p-1 rounded-lg hover:bg-blue-50"
-              title="Reassign Owner">
-              <i class="fa-solid fa-user-gear text-xs"></i>
+            <button onclick="runCardServerProbe(event, '{{ server.id }}', this)"
+              class="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors cursor-pointer"
+              title="Run Live Health Check on this Server">
+              <i class="fa-solid fa-rotate text-[12px]"></i>
             </button>
-            <button type="button"
-              onclick="confirmDeleteServer('{{ server.id }}', '{{ server.name }}')"
-              class="text-slate-400 hover:text-rose-500 transition-colors p-1 rounded-lg hover:bg-rose-50"
+            <button onclick="openServerDetailsModal(this)"
+              class="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+              title="View Details">
+              <i class="fa-solid fa-circle-info text-[13px]"></i>
+            </button>
+          {% if viewer_role == 'manager' or viewer_role == 'tl' %}
+            <button onclick="openReassignModal(this, '{{ server.id }}', '{{ server.name }}', '{{ server.owner.id }}')"
+              data-assigned="{% for au in server.assigned_users.all %}{{ au.id }},{% endfor %}"
+              class="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-colors"
+              title="Manage Access">
+              <i class="fa-solid fa-user-gear text-[13px]"></i>
+            </button>
+            <button type="button" onclick="confirmDeleteServer('{{ server.id }}', '{{ server.name }}')"
+              class="w-7 h-7 flex items-center justify-center rounded-md text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
               title="Remove Server">
-              <i class="fa-solid fa-trash-can text-xs"></i>
+              <i class="fa-solid fa-trash-can text-[13px]"></i>
             </button>
-          </div>
           {% endif %}
+          </div>
         </div>
         <div class="p-5">
           <!-- PROGRESS BAR (DAILY) -->
           <div class="flex items-center justify-between mb-4 gap-3">
             <div class="pbar flex-1 bg-slate-100">
-              <div class="pfill {% if server.daily_pct == 100 %}bg-emerald-500{% else %}bg-blue-600{% endif %}"
+              <div class="pfill {% if server.daily_pct == 100 %}bg-emerald-500{% else %}bg-emerald-600{% endif %}"
                 style="width: {{ server.daily_pct }}%"></div>
             </div>
-            <span class="text-[11px] font-bold {% if server.daily_pct == 100 %}text-emerald-600{% elif server.daily_pct > 0 %}text-blue-600{% else %}text-slate-400{% endif %}">
+            <span
+              class="text-[11px] font-bold {% if server.daily_pct == 100 %}text-emerald-600{% elif server.daily_pct > 0 %}text-emerald-600{% else %}text-slate-400{% endif %}">
               {{ server.daily_pct }}%
             </span>
           </div>
 
           <!-- 7-DAY HISTORY MATRIX -->
-          <div class="flex items-center justify-between gap-1 mb-5">
+          <div class="flex items-end justify-between gap-1.5 mb-5 h-14 bg-slate-50/50 p-2 rounded-xl border border-slate-100/60 shadow-inner">
             {% for h in server.history_7d %}
-            <div class="flex flex-col items-center gap-1 flex-1">
-              <div class="w-full h-1.5 rounded-full shadow-sm transition-all
-                   {% if h.pct == 100 %}bg-blue-600
-                   {% elif h.pct > 0 %}bg-blue-300
-                   {% else %}bg-slate-100{% endif %}" title="{{ h.day }}: {{ h.pct }}% Done"></div>
-              <span class="text-[8px] font-bold {% if h.is_today %}text-blue-600{% else %}text-slate-400{% endif %} uppercase">{{ h.day|slice:":1" }}</span>
+            <div class="flex flex-col items-center justify-end h-full flex-1 group cursor-help relative" title="{{ h.day }}: {{ h.pct }}% Done">
+              <div class="w-full max-w-[8px] rounded-t-sm transition-all duration-300 ease-in-out group-hover:opacity-80
+                   {% if h.pct == 100 %}bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.4)]
+                   {% elif h.pct > 0 %}bg-emerald-300
+                   {% else %}bg-slate-200{% endif %}" 
+                   style="height: {% if h.pct > 0 %}{{ h.pct }}%{% else %}8%{% endif %}; min-height: 4px;">
+              </div>
+              <span class="text-[9px] font-bold mt-1.5 transition-colors
+                   {% if h.is_today %}text-emerald-600{% else %}text-slate-400 group-hover:text-slate-600{% endif %} uppercase">
+                {{ h.day|slice:":1" }}
+              </span>
             </div>
             {% endfor %}
           </div>
@@ -173,14 +322,14 @@
             <div>
               <div class="flex items-center justify-between mb-1">
                 <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                  <i class="fa-solid fa-calendar-day text-[10px] text-blue-500"></i> Daily
+                  <i class="fa-solid fa-calendar-day text-[10px] text-emerald-500"></i> Daily
                   <span class="text-slate-300 font-normal normal-case">Today</span>
                 </span>
-                <span class="text-[11px] font-bold {% if server.daily_done == server.daily_total and server.daily_total > 0 %}text-emerald-600{% elif server.daily_done > 0 %}text-blue-600{% else %}text-slate-400{% endif %}">{{ server.daily_done }}/{{ server.daily_total }}</span>
+                <span class="text-[11px] font-bold {% if server.daily_done == server.daily_total and server.daily_total > 0 %}text-emerald-600{% elif server.daily_done > 0 %}text-emerald-600{% else %}text-slate-400{% endif %}">{{ server.daily_done }}/{{ server.daily_total }}</span>
               </div>
               <div class="h-1 bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  class="h-full rounded-full {% if server.daily_pct == 100 %}bg-emerald-500{% elif server.daily_pct > 0 %}bg-blue-500{% else %}bg-slate-200{% endif %} transition-all"
+                  class="h-full rounded-full {% if server.daily_pct == 100 %}bg-emerald-500{% elif server.daily_pct > 0 %}bg-emerald-500{% else %}bg-slate-200{% endif %} transition-all"
                   style="width:{{ server.daily_pct }}%"></div>
               </div>
             </div>
@@ -203,19 +352,18 @@
             <div class="pb-1">
               <div class="flex items-center justify-between mb-1">
                 <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
-                  <i class="fa-solid fa-calendar-check text-[10px] text-amber-500"></i> Monthly
+                  <i class="fa-solid fa-calendar-check text-[10px] text-emerald-500"></i> Monthly
                   <span class="text-slate-300 font-normal normal-case">This Month</span>
                 </span>
-                <span class="text-[11px] font-bold {% if server.monthly_done == server.monthly_total and server.monthly_total > 0 %}text-emerald-600{% elif server.monthly_done > 0 %}text-amber-500{% else %}text-slate-400{% endif %}">{{ server.monthly_done }}/{{ server.monthly_total }}</span>
+                <span class="text-[11px] font-bold {% if server.monthly_done == server.monthly_total and server.monthly_total > 0 %}text-emerald-600{% elif server.monthly_done > 0 %}text-emerald-500{% else %}text-slate-400{% endif %}">{{ server.monthly_done }}/{{ server.monthly_total }}</span>
               </div>
               <div class="h-1 bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  class="h-full rounded-full {% if server.monthly_pct == 100 %}bg-emerald-500{% elif server.monthly_pct > 0 %}bg-amber-400{% else %}bg-slate-200{% endif %} transition-all"
+                  class="h-full rounded-full {% if server.monthly_pct == 100 %}bg-emerald-500{% elif server.monthly_pct > 0 %}bg-emerald-400{% else %}bg-slate-200{% endif %} transition-all"
                   style="width:{{ server.monthly_pct }}%"></div>
               </div>
             </div>
           </div>
-
 
           <div class="flex gap-2">
             <a href="{% url 'server_management' server.id %}"
@@ -223,7 +371,7 @@
               <i class="fa-solid fa-clipboard-check text-xs"></i> Verify
             </a>
             <a href="{% url 'server_details' server.id %}"
-              class="flex-1 py-2 bg-blue-50 text-blue-600 border border-blue-200 rounded-xl text-[11px] font-bold hover:bg-blue-100 transition-all flex items-center justify-center gap-1.5 active:scale-95">
+              class="flex-1 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 rounded-xl text-[11px] font-bold hover:bg-emerald-100 transition-all flex items-center justify-center gap-1.5 active:scale-95">
               <i class="fa-solid fa-address-card text-xs"></i> Details
             </a>
           </div>
@@ -237,14 +385,16 @@
       {% endfor %}
 
       <!-- ADD SERVER BUTTON -->
+      {% if request.user.developer.role == 'manager' or request.user.developer.role == 'tl' %}
       <div onclick="openAddServerModal()"
-        class="bg-slate-50 rounded-2xl border border-dashed border-slate-300 flex flex-col items-center justify-center p-6 text-center group cursor-pointer hover:bg-white hover:border-blue-400 transition-all">
+        class="bg-slate-50 rounded-2xl border border-dashed border-slate-300 flex flex-col items-center justify-center p-6 text-center group cursor-pointer hover:bg-white hover:border-emerald-400 transition-all">
         <div
-          class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-blue-500 group-hover:border-blue-300 shadow-sm transition-all mb-3">
+          class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-400 group-hover:text-emerald-500 group-hover:border-emerald-300 shadow-sm transition-all mb-3">
           <i class="fa-solid fa-plus text-sm"></i>
         </div>
-        <div class="text-[12px] font-bold text-slate-500 group-hover:text-blue-600">Add New Server</div>
+        <div class="text-[12px] font-bold text-slate-500 group-hover:text-emerald-600">Add New Server</div>
       </div>
+      {% endif %}
     </div>
   </div>
 
@@ -262,17 +412,17 @@
         <i class="fa-solid fa-arrow-up-right-from-square text-blue-500"></i> Quick Log Access
       </h3>
       <a href="{% url 'task_log_filter' %}"
-        class="text-[11px] text-blue-600 font-bold hover:underline flex items-center gap-1">
+        class="text-[11px] text-emerald-600 font-bold hover:underline flex items-center gap-1">
         View All Logs <i class="fa-solid fa-arrow-right text-[9px]"></i>
       </a>
     </div>
     <div class="p-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
       {% for server in servers %}
       <a href="{% url 'task_log_filter' %}?server_id={{ server.id }}"
-        class="flex items-center gap-3 p-3 rounded-xl border border-slate-100 hover:border-blue-200 hover:bg-blue-50/50 transition-all group">
+        class="flex items-center gap-3 p-3 rounded-lg border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/50 transition-all group">
         <div
-          class="w-8 h-8 rounded-lg bg-slate-100 group-hover:bg-blue-100 flex items-center justify-center flex-shrink-0 transition-colors">
-          <i class="fa-solid fa-server text-slate-500 group-hover:text-blue-600 text-xs transition-colors"></i>
+          class="w-8 h-8 rounded bg-slate-100 group-hover:bg-emerald-50 flex items-center justify-center flex-shrink-0 transition-colors">
+          <i class="fa-solid fa-server text-slate-500 group-hover:text-emerald-600 text-[10px] transition-colors"></i>
         </div>
         <div class="min-w-0">
           <div class="text-[12px] font-bold text-slate-800 truncate">{{ server.name }}</div>
@@ -289,150 +439,115 @@
 
 
 
+{% comment %}
 <!-- OTHER SECTIONS (Team, Log, etc.) -->
 <div id="page-team" class="page-section hidden">
   <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
     <div>
-      <h3 class="display text-[20px] font-bold text-slate-900">Team Performance</h3>
-      <p class="text-[12px] text-slate-500">Real-time compliance and system coverage across the DevOps team</p>
+      <h3 class="display text-[20px] font-bold text-slate-900">Team Overview</h3>
+      <p class="text-[12px] text-slate-500">Real-time compliance and system coverage</p>
     </div>
-    <div
-      class="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100/50 px-3 py-1.5 rounded-lg border border-slate-200/60">
-      <i class="fa-solid fa-clock text-blue-500"></i>
+    <div class="flex items-center gap-2 text-[11px] font-bold text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-200">
+      <i class="fa-solid fa-clock text-emerald-500"></i>
       Last Sync: {% now "H:i" %}
     </div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-    <div
-      class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-center">
-      <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0">
-          <i class="fa-solid fa-chart-line text-xl"></i>
-        </div>
-        <div class="min-w-0">
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Team Average</div>
-          <div class="display text-2xl font-bold text-slate-900 leading-none">{{ team_avg }}%</div>
-        </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+      <div class="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 flex-shrink-0 border border-slate-100">
+        <i class="fa-solid fa-chart-line text-lg"></i>
+      </div>
+      <div>
+        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Team Average</div>
+        <div class="text-xl font-bold text-slate-900 leading-none">{{ team_avg }}%</div>
       </div>
     </div>
-
-    <div
-      class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-center">
-      <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0">
-          <i class="fa-solid fa-trophy text-xl"></i>
-        </div>
-        <div class="min-w-0">
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Full Completion</div>
-          <div class="display text-2xl font-bold text-slate-900 leading-none">{{ full_comp }}</div>
-        </div>
+    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+      <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0 border border-emerald-100">
+        <i class="fa-solid fa-trophy text-lg"></i>
+      </div>
+      <div>
+        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Full Completion</div>
+        <div class="text-xl font-bold text-slate-900 leading-none">{{ full_comp }}</div>
       </div>
     </div>
-
-    <div
-      class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-center">
-      <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-rose-50 flex items-center justify-center text-rose-600 flex-shrink-0">
-          <i class="fa-solid fa-triangle-exclamation text-xl"></i>
-        </div>
-        <div class="min-w-0">
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Needs Attention</div>
-          <div class="display text-2xl font-bold text-rose-600 leading-none">{{ needs_attn }}</div>
-        </div>
+    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+      <div class="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 flex-shrink-0 border border-slate-100">
+        <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+      </div>
+      <div>
+        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Needs Attention</div>
+        <div class="text-xl font-bold text-slate-900 leading-none">{{ needs_attn }}</div>
       </div>
     </div>
-
-    <div
-      class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-all flex flex-col justify-center">
-      <div class="flex items-center gap-4">
-        <div class="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 flex-shrink-0">
-          <i class="fa-solid fa-users text-xl"></i>
-        </div>
-        <div class="min-w-0">
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Members</div>
-          <div class="display text-2xl font-bold text-slate-900 leading-none">{{ team_members|length }}</div>
-        </div>
+    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+      <div class="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 flex-shrink-0 border border-slate-100">
+        <i class="fa-solid fa-users text-lg"></i>
+      </div>
+      <div>
+        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Total Members</div>
+        <div class="text-xl font-bold text-slate-900 leading-none">{{ team_members|length }}</div>
       </div>
     </div>
   </div>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-    {% for member in team_members %}
-    <div
-      class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm hover:shadow-lg hover:border-blue-200 transition-all group flex flex-col">
-      <div class="p-4 border-b border-slate-100 bg-slate-50/50">
-        <div class="flex items-center gap-3">
-          <div
-            class="w-9 h-9 rounded-xl flex items-center justify-center text-white text-[13px] shadow-md transition-all flex-shrink-0"
-            style="background: {{ member.gradient }}">
-            {{ member.initials }}
-          </div>
-          <div class="min-w-0">
-            <h4 class="text-[13.5px] font-bold text-slate-900 truncate mb-0.5">{{ member.user.get_full_name|default:member.user.username }}</h4>
-            <div class="flex items-center gap-1.5">
-              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              <p class="text-[9px] text-slate-500 uppercase font-bold tracking-widest">{{ member.role }}</p>
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-x-auto">
+    <table class="w-full text-left border-collapse min-w-[700px]">
+      <thead>
+        <tr class="bg-slate-50/80 border-b border-slate-200">
+          <th class="px-5 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Team Member</th>
+          <th class="px-5 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Role</th>
+          <th class="px-5 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[25%]">Daily Compliance</th>
+          <th class="px-5 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[25%]">System Coverage</th>
+          <th class="px-5 py-2.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-100">
+        {% for member in team_members %}
+        <tr class="hover:bg-slate-50/50 transition-colors group">
+          <td class="px-5 py-3">
+            <div class="flex items-center gap-3">
+              <div class="w-7 h-7 rounded-md bg-emerald-50 text-emerald-600 flex items-center justify-center text-[10px] font-bold border border-emerald-100 flex-shrink-0">
+                {{ member.initials }}
+              </div>
+              <div class="font-bold text-[12.5px] text-slate-800">{{ member.user.get_full_name|default:member.user.username }}</div>
             </div>
-          </div>
-        </div>
-      </div>
-      <div class="p-4 flex-1 flex flex-col space-y-4">
-        <div>
-          <div class="flex justify-between items-center text-[11px] mb-1.5">
-            <span class="text-slate-500 font-semibold">Daily Compliance</span>
-            <span class="font-bold text-blue-600">{{ member.daily_pct }}%</span>
-          </div>
-          <div class="pbar h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div
-              class="h-full rounded-full transition-all duration-700 ease-out {% if member.daily_pct == 100 %}bg-emerald-500{% else %}bg-blue-600{% endif %}"
-              style="width: {{ member.daily_pct }}%"></div>
-          </div>
-        </div>
-
-        <div>
-          <div class="flex justify-between items-center text-[11px] mb-1.5">
-            <span class="text-slate-500 font-semibold">System Coverage</span>
-            <span class="font-bold text-slate-900">{{ member.server_count }} Nodes</span>
-          </div>
-          <div class="pbar h-1.5 bg-slate-100 rounded-full overflow-hidden">
-            <div class="h-full bg-slate-300 rounded-full"
-              style="width: {% if servers|length > 0 %}{{ member.server_count|percentage:servers|length }}{% else %}0{% endif %}%">
+          </td>
+          <td class="px-5 py-3">
+            <div class="inline-flex items-center gap-1.5 bg-slate-50 px-2.5 py-1 rounded border border-slate-200/60 w-24">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
+              <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">{{ member.role }}</span>
             </div>
-          </div>
-        </div>
-
-        <div class="flex items-center justify-between pt-4 border-t border-slate-100 mt-auto">
-          <div class="flex -space-x-1.5">
-            {% for i in member.server_count|get_range %}
-            {% if forloop.counter <= 4 %} <div
-              class="w-6 h-6 rounded-full border-2 border-white bg-slate-100 flex items-center justify-center text-[7px] font-bold text-slate-400 shadow-sm"
-              title="Managed Server">SRV</div>
-          {% endif %}
-          {% endfor %}
-          {% if member.server_count > 4 %}
-          <div
-            class="w-6 h-6 rounded-full border-2 border-white bg-blue-50 flex items-center justify-center text-[8px] font-bold text-blue-600 shadow-sm">
-            +{{ member.server_count|subtract:4 }}</div>
-          {% endif %}
-          {% if member.server_count == 0 %}
-          <div
-            class="w-6 h-6 rounded-full border-2 border-dashed border-slate-200 bg-slate-50/50 flex items-center justify-center"
-            title="No nodes assigned">
-            <i class="fa-solid fa-minus text-[8px] text-slate-300"></i>
-          </div>
-          {% endif %}
-        </div>
-        <button onclick="viewUserDetails('{{ member.user.id }}')"
-          class="text-[10px] font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-blue-50 transition-all">
-          Details <i class="fa-solid fa-chevron-right text-[8px]"></i>
-        </button>
-      </div>
-    </div>
+          </td>
+          <td class="px-5 py-3">
+            <div class="flex items-center gap-3">
+              <div class="text-[11px] font-bold {% if member.daily_pct == 100 %}text-emerald-600{% else %}text-slate-600{% endif %} w-8">{{ member.daily_pct }}%</div>
+              <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full rounded-full transition-all duration-700 {% if member.daily_pct == 100 %}bg-emerald-500{% else %}bg-slate-400{% endif %}" style="width: {{ member.daily_pct }}%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="px-5 py-3">
+            <div class="flex items-center gap-3">
+              <div class="text-[11px] font-bold text-slate-600 w-16">{{ member.server_count }} Node{% if member.server_count != 1 %}s{% endif %}</div>
+              <div class="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                <div class="h-full bg-slate-300 rounded-full" style="width: {% if servers|length > 0 %}{{ member.server_count|percentage:servers|length }}{% else %}0{% endif %}%"></div>
+              </div>
+            </div>
+          </td>
+          <td class="px-5 py-3 text-right">
+            <button onclick="viewUserDetails('{{ member.user.id }}')" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all opacity-0 group-hover:opacity-100">
+              Details <i class="fa-solid fa-chevron-right text-[8px]"></i>
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
   </div>
-  {% endfor %}
 </div>
-</div>
+{% endcomment %}
 
 <!-- ACTIVITY LOG REDIRECT — logs live at /logs/ now -->
 <div id="page-log" class="page-section hidden">
@@ -456,7 +571,7 @@
 <!-- QUICK LOG MODAL (Server Command Center) -->
 <div id="ql-modal"
   class="fixed inset-0 z-[60] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden opacity-0 transition-opacity duration-200">
-  <div class="bg-white rounded-[24px] w-full max-w-[520px] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
+  <div class="bg-white rounded-[24px] w-full max-w-[700px] shadow-2xl flex flex-col max-h-[90vh] overflow-hidden">
     <!-- MODAL HEADER -->
     <div class="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
       <div>
@@ -470,73 +585,95 @@
     </div>
 
     <!-- MODAL BODY (Scrollable) -->
-    <div class="flex-1 overflow-y-auto p-8 custom-scrollbar">
-      <div class="grid grid-cols-2 gap-4 mb-6">
+    <div class="flex-1 overflow-y-auto p-6 custom-scrollbar bg-slate-50/50 space-y-5">
+
+      <!-- Section 1: Context -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+        <h4
+          class="text-[11px] font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2 border-b border-slate-100 pb-3 mb-2">
+          <i class="fa-solid fa-list-check text-emerald-500 text-sm"></i> Task Context
+        </h4>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Log
+              Type</label>
+            <div class="flex bg-slate-100 p-1 rounded-xl">
+              <button onclick="setModalCat('w')" id="mc-w"
+                class="flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all bg-white text-slate-900 shadow-sm">Weekly</button>
+              <button onclick="setModalCat('d')" id="mc-d"
+                class="flex-1 py-1.5 text-[11px] font-medium rounded-lg transition-all text-slate-500 hover:text-slate-700">Daily</button>
+              <button onclick="setModalCat('m')" id="mc-m"
+                class="flex-1 py-1.5 text-[11px] font-medium rounded-lg transition-all text-slate-500 hover:text-slate-700">Monthly</button>
+            </div>
+            <input type="hidden" id="modal-cat" value="w">
+          </div>
+
+          <div>
+            <label
+              class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Infrastructure
+              Node</label>
+            <select id="modal-server"
+              class="custom-select-trigger" data-btn-class="bg-slate-50 border-slate-200">
+              <option value="">Select Server...</option>
+              {% for s in servers %}
+              <option value="{{ s.id }}">{{ s.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
         <div>
-          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Infrastructure
-            Node</label>
-          <select id="modal-server"
-            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-blue-500 font-medium">
-            <option value="">Select Server...</option>
-            {% for s in servers %}
-            <option value="{{ s.id }}">{{ s.name }}</option>
-            {% endfor %}
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Specific
+            Task</label>
+          <select id="modal-task" onchange="renderDynamicFields()" class="custom-select-trigger" data-btn-class="bg-slate-50 border-slate-200">
+            <!-- Populated by JS -->
           </select>
         </div>
-        <div>
-          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Log
-            Type</label>
-          <div class="flex bg-slate-100 p-1 rounded-xl">
-            <button onclick="setModalCat('d')" id="mc-d"
-              class="flex-1 py-1.5 text-[11px] font-bold rounded-lg transition-all bg-white text-slate-900 shadow-sm">Daily</button>
-            <button onclick="setModalCat('w')" id="mc-w"
-              class="flex-1 py-1.5 text-[11px] font-medium rounded-lg transition-all text-slate-500">Weekly</button>
-            <button onclick="setModalCat('m')" id="mc-m"
-              class="flex-1 py-1.5 text-[11px] font-medium rounded-lg transition-all text-slate-500">Monthly</button>
-          </div>
-          <input type="hidden" id="modal-cat" value="d">
+      </div>
+
+      <!-- Section 2: Execution Data -->
+      <div id="dynamic-fields-wrapper" class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm hidden">
+        <h4
+          class="text-[11px] font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2 border-b border-slate-100 pb-3 mb-4">
+          <i class="fa-solid fa-database text-emerald-500 text-sm"></i> Execution Data
+        </h4>
+        <div id="dynamic-fields-root" class="grid grid-cols-2 gap-4">
+          <!-- Fields generated via JS -->
         </div>
       </div>
 
-      <div class="mb-6">
-        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Specific
-          Task</label>
-        <select id="modal-task" onchange="renderDynamicFields()"
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13.5px] focus:outline-none focus:border-blue-500 font-semibold text-slate-800">
-          <!-- Populated by JS -->
-        </select>
-      </div>
+      <!-- Section 3: Outcome -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+        <h4
+          class="text-[11px] font-bold text-slate-800 uppercase tracking-widest flex items-center gap-2 border-b border-slate-100 pb-3 mb-2">
+          <i class="fa-solid fa-flag-checkered text-emerald-500 text-sm"></i> Final Outcome
+        </h4>
 
-      <!-- DYNAMIC FIELDS -->
-      <div id="dynamic-fields-root" class="grid grid-cols-2 gap-4 border-t border-slate-100 pt-6 mb-6">
-        <!-- Fields generated via JS -->
-      </div>
-
-      <div class="space-y-6 border-t border-slate-100 pt-6">
         <div>
           <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Verification
             Status</label>
-          <div class="grid grid-cols-3 gap-3">
+          <div class="flex gap-3">
             <button onclick="setModalStatus('done')" id="ms-done"
-              class="py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all flex items-center justify-center gap-2 border-green-100 bg-green-50 text-green-700">
+              class="flex-1 py-2.5 rounded-xl text-[12px] font-bold border-2 transition-all flex items-center justify-center gap-1.5 border-emerald-100 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-200">
               <i class="fa-solid fa-check"></i> Done
             </button>
             <button onclick="setModalStatus('wip')" id="ms-wip"
-              class="py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all flex items-center justify-center gap-2 border-slate-100 bg-slate-50 text-slate-600">
+              class="flex-1 py-2.5 rounded-xl text-[12px] font-bold border-2 transition-all flex items-center justify-center gap-1.5 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100">
               <i class="fa-solid fa-rotate"></i> WIP
             </button>
             <button onclick="setModalStatus('blk')" id="ms-blk"
-              class="py-2.5 rounded-xl text-[11px] font-bold border-2 transition-all flex items-center justify-center gap-2 border-slate-100 bg-slate-50 text-slate-600">
-              <i class="fa-solid fa-ban"></i> Block
+              class="flex-1 py-2.5 rounded-xl text-[12px] font-bold border-2 transition-all flex items-center justify-center gap-1.5 border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100">
+              <i class="fa-solid fa-ban"></i> Blocked
             </button>
           </div>
         </div>
 
         <div>
-          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Engineer
-            Remarks</label>
-          <textarea id="modal-remarks" rows="3"
-            class="w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-[13px] focus:outline-none focus:border-blue-500 resize-none transition-all"
+          <label
+            class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5 px-1">Remarks</label>
+          <textarea id="modal-remarks" rows="2"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] focus:outline-none focus:border-emerald-500 resize-none transition-all"
             placeholder="Document any findings or actions taken..."></textarea>
         </div>
       </div>
@@ -562,7 +699,7 @@
     <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
       <div>
         <h3 class="text-[16px] font-bold text-slate-900">Add New Server</h3>
-        <p class="text-[11px] text-slate-400 mt-0.5">Register a server to track its R&R responsibilities</p>
+        <p class="text-[11px] text-slate-400 mt-0.5">Register a server to track its responsibilities</p>
       </div>
       <button onclick="closeAddServerModal()"
         class="w-8 h-8 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-800 transition-all shadow-sm">
@@ -573,28 +710,68 @@
     <form id="add-server-form" class="p-6 space-y-4">
       {% csrf_token %}
       <div>
-        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Server Name</label>
-        <input type="text" id="as-name" required placeholder="e.g. Production-Web-01"
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 font-medium transition-all">
+        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Server Name <span class="text-slate-300 font-normal">(optional)</span></label>
+        <input type="text" id="as-name" placeholder="e.g. Production-Web-01"
+          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 font-medium transition-all">
       </div>
-      <div>
-        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">IP Address <span
-            class="text-slate-300 font-normal">(optional)</span></label>
-        <input type="text" id="as-ip" placeholder="e.g. 192.168.1.10"
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 font-mono transition-all">
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">IP Address</label>
+          <input type="text" id="as-ip" required placeholder="e.g. 192.168.1.10"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 font-mono transition-all">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Port Number <span
+              class="text-slate-300 font-normal">(default: 22)</span></label>
+          <input type="text" inputmode="numeric" pattern="[0-9]*" id="as-port" placeholder="22" value="22"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 font-mono transition-all">
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Username <span
+              class="text-slate-300 font-normal">(optional)</span></label>
+          <input type="text" id="as-user" placeholder="e.g. root"
+            class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 font-medium transition-all">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Password <span
+              class="text-slate-300 font-normal">(optional)</span></label>
+          <div class="relative">
+            <input type="password" id="as-password" placeholder="Server password"
+              class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 font-medium transition-all">
+            <button type="button" onclick="toggleAsPwd()" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600">
+              <i class="fa-regular fa-eye text-sm" id="as-eye-icon"></i>
+            </button>
+          </div>
+        </div>
       </div>
       {% if request.user.developer.role == 'manager' or request.user.developer.role == 'tl' %}
-      <div>
-        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Assign Owner</label>
-        <select id="as-owner"
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 font-medium transition-all">
-          <option value="{{ request.user.id }}">Myself (@{{ request.user.username }})</option>
-          {% for member in team_members %}
-          {% if member.user.id != request.user.id %}
-          <option value="{{ member.user.id }}">{{ member.user.get_full_name|default:member.user.username }} (@{{ member.user.username }})</option>
-          {% endif %}
-          {% endfor %}
-        </select>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Assign Owner</label>
+          <select id="as-owner" name="owner" required class="custom-select-trigger" data-btn-class="bg-slate-50 border-slate-200">
+            <option value="{{ request.user.id }}">Myself (@{{ request.user.username }})</option>
+            {% for member in team_members %}
+            {% if member.user.id != request.user.id %}
+            <option value="{{ member.user.id }}">{{ member.user.get_full_name|default:member.user.username }} (@{{
+              member.user.username }})</option>
+            {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Assigned Employees</label>
+          <select id="as-assigned" name="assigned_users" multiple class="custom-select-trigger" data-btn-class="bg-slate-50 border-slate-200">
+            {% for member in team_members %}
+            {% if member.user.id != request.user.id %}
+            <option value="{{ member.user.id }}">{{ member.user.get_full_name|default:member.user.username }}</option>
+            {% endif %}
+            {% endfor %}
+          </select>
+        </div>
       </div>
       {% endif %}
       <div id="as-error"
@@ -613,21 +790,78 @@
         <i class="fa-solid fa-server text-xs"></i> Register Server
       </button>
     </div>
+    </div>
+  </div>
+</div>
+
+<!-- SERVER DETAILS MODAL -->
+<div id="server-details-modal" class="fixed inset-0 z-[80] bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 hidden">
+  <div class="bg-white rounded-2xl w-full max-w-[420px] shadow-2xl overflow-hidden">
+    <div class="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div>
+        <h3 class="text-[16px] font-bold text-slate-900"><i class="fa-solid fa-server text-emerald-500 mr-2"></i>Server Details</h3>
+      </div>
+      <button onclick="closeServerDetailsModal()"
+        class="w-8 h-8 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-800 transition-all shadow-sm">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+    <div class="p-6 space-y-4">
+      <input type="hidden" id="sd-id">
+      <div>
+        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Server Name</label>
+        <input type="text" id="sd-name" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-[13px] font-bold text-slate-900 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all">
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">IP Address</label>
+          <input type="text" id="sd-ip" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-[13px] font-mono text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Port Number</label>
+          <input type="text" inputmode="numeric" pattern="[0-9]*" id="sd-port" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-[13px] font-mono text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Username</label>
+          <input type="text" id="sd-user" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-[13px] font-medium text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all">
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Password</label>
+          <div class="relative">
+            <input type="password" id="sd-password" class="w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 pr-8 text-[13px] font-mono text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all">
+            <button type="button" onclick="toggleSdPwd()" class="absolute right-2 top-2 text-slate-400 hover:text-emerald-500 transition-colors">
+              <i class="fa-regular fa-eye text-xs" id="sd-eye-icon"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="sd-error" class="hidden text-[11px] text-rose-600 bg-rose-50 border border-rose-100 rounded-xl px-3 py-2 mt-2">
+        <i class="fa-solid fa-circle-exclamation mr-1"></i><span id="sd-error-msg"></span>
+      </div>
+      <div class="pt-2">
+        <button type="button" onclick="submitUpdateServer()"
+          class="w-full bg-emerald-500 text-white py-2.5 rounded-xl text-[12px] font-bold hover:bg-emerald-600 transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20">
+          <i class="fa-solid fa-check text-xs"></i> Update Details
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
 <!-- REASSIGN SERVER MODAL -->
 <div id="reassign-modal" class="fixed inset-0 z-[100] hidden flex items-center justify-center p-4">
   <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
-  <div class="bg-white rounded-3xl w-full max-w-md relative z-10 shadow-2xl border border-slate-100 overflow-hidden">
-    <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+  <div class="bg-white rounded-3xl w-full max-w-md relative z-10 shadow-2xl border border-slate-100 overflow-visible">
+    <div class="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-t-3xl">
       <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-2xl bg-blue-50 flex items-center justify-center text-blue-600">
+        <div class="w-10 h-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
           <i class="fa-solid fa-user-gear text-lg"></i>
         </div>
         <div>
-          <h3 class="text-lg font-bold text-slate-900">Reassign Owner</h3>
-          <p class="text-[11px] text-slate-500">Transfer ownership of <span id="reassign-server-name"
+          <h3 class="text-lg font-bold text-slate-900">Manage Access</h3>
+          <p class="text-[11px] text-slate-500">Transfer ownership or assign employees to <span id="reassign-server-name"
               class="font-bold text-slate-700"></span></p>
         </div>
       </div>
@@ -639,18 +873,30 @@
 
     <div class="p-6 space-y-4">
       <input type="hidden" id="reassign-server-id">
-      <div>
-        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Select New
-          Owner</label>
-        <select id="reassign-owner"
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/10 font-medium transition-all">
-          <option value="{{ request.user.id }}">Myself (@{{ request.user.username }})</option>
-          {% for member in team_members %}
-          {% if member.user.id != request.user.id %}
-          <option value="{{ member.user.id }}">{{ member.user.get_full_name|default:member.user.username }} (@{{ member.user.username }})</option>
-          {% endif %}
-          {% endfor %}
-        </select>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Select New
+            Owner</label>
+          <select id="reassign-owner" class="custom-select-trigger" data-btn-class="bg-slate-50 border-slate-200">
+            <option value="{{ request.user.id }}">Myself (@{{ request.user.username }})</option>
+            {% for member in team_members %}
+            {% if member.user.id != request.user.id %}
+            <option value="{{ member.user.id }}">{{ member.user.get_full_name|default:member.user.username }} (@{{ member.user.username }})</option>
+            {% endif %}
+            {% endfor %}
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Assigned Employees</label>
+          <select id="reassign-assigned" multiple class="custom-select-trigger" data-btn-class="bg-slate-50 border-slate-200">
+            {% for member in team_members %}
+            {% if member.user.id != request.user.id %}
+            <option value="{{ member.user.id }}">{{ member.user.get_full_name|default:member.user.username }}</option>
+            {% endif %}
+            {% endfor %}
+          </select>
+        </div>
       </div>
 
       <div id="reassign-error"
@@ -660,12 +906,13 @@
       </div>
     </div>
 
-    <div class="p-6 bg-slate-50/80 border-t border-slate-100 flex gap-3">
+    <div class="p-6 bg-slate-50/80 border-t border-slate-100 flex gap-3 rounded-b-3xl">
       <button onclick="closeReassignModal()"
         class="flex-1 py-2.5 text-[12px] font-bold text-slate-500 hover:text-slate-700 transition-colors">Cancel</button>
       <button onclick="submitReassign()"
-        class="flex-1 py-2.5 bg-blue-600 text-white rounded-xl text-[12px] font-bold hover:bg-blue-700 transition-all shadow-md active:scale-95">Transfer
-        Ownership</button>
+        class="flex-1 py-2.5 bg-emerald-500 text-white rounded-xl text-[12px] font-bold hover:bg-emerald-600 transition-all shadow-md active:scale-95 flex items-center justify-center gap-2">
+        <i class="fa-solid fa-check text-xs"></i> Save Changes
+      </button>
     </div>
   </div>
 </div>
@@ -711,7 +958,7 @@
   window.showSection = showSection;
 
   // ── Handle URL hash immediately (runs after showSection is defined) ──
-  (function() {
+  (function () {
     const hash = window.location.hash.replace('#', '');
     if (hash && document.getElementById('page-' + hash)) {
       showSection(hash);
@@ -719,8 +966,8 @@
   })();
 
   // ── Intercept nav-link clicks when already on the dashboard ──
-  document.querySelectorAll('.nav-link').forEach(function(link) {
-    link.addEventListener('click', function(e) {
+  document.querySelectorAll('.nav-link').forEach(function (link) {
+    link.addEventListener('click', function (e) {
       var href = link.getAttribute('href') || '';
       if (href.includes('#')) {
         var section = href.split('#')[1];
@@ -776,7 +1023,7 @@
     document.getElementById('modal-server').value = serverId;
     document.getElementById('modal-server-title').textContent = serverName;
     document.getElementById('modal-server-subtitle').textContent = 'Server Command Center';
-    setModalCat('d');
+    setModalCat('w');
   }
 
   function openNoteModal(taskId) {
@@ -805,58 +1052,96 @@
   function refreshModalTasks() {
     const cat = document.getElementById('modal-cat').value;
     const taskSelect = document.getElementById('modal-task');
+
+    // Update Hidden Select
     taskSelect.innerHTML = TASKS[cat].map(t => `<option value="${t.id}">${t.text}</option>`).join('');
+    
+    if (TASKS[cat].length > 0) {
+      taskSelect.value = TASKS[cat][0].id;
+    }
+    
     renderDynamicFields();
   }
 
   function renderDynamicFields() {
     const cat = document.getElementById('modal-cat').value;
     const taskId = document.getElementById('modal-task').value;
-    const task = TASKS[cat].find(t => t.id === taskId);
+    const task = TASKS[cat].find(t => String(t.id) === String(taskId));
+    const wrapper = document.getElementById('dynamic-fields-wrapper');
     const root = document.getElementById('dynamic-fields-root');
 
     // Clear previous
     root.innerHTML = '';
 
     if (!task || !task.fields || task.fields.length === 0) {
-      root.classList.add('hidden');
+      wrapper.classList.add('hidden');
       return;
     }
 
-    root.classList.remove('hidden');
-    root.innerHTML = task.fields.map(f => {
-      // Smart detection for options like "Status (Up/Down)" or "Rollback (Yes/No)"
-      const match = f.match(/\(([^)]+)\)/);
-      if (match) {
-        const options = match[1].split('/').map(o => o.trim());
-        const label = f.replace(/\([^)]+\)/, '').trim();
+    wrapper.classList.remove('hidden');
+    root.innerHTML = task.fields.map(rawField => {
+      let f, cleanLabel, options = null, isLarge = false;
+      if (typeof rawField === 'object' && rawField !== null) {
+        f = rawField.name || '';
+        cleanLabel = rawField.label || f.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+        options = rawField.options || (rawField.choices ? rawField.choices : null);
+        isLarge = rawField.type === 'textarea';
+      } else {
+        f = String(rawField || '');
+        cleanLabel = f.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+        if (f.includes('|')) {
+          const parts = f.split('|');
+          f = parts[0].trim();
+          cleanLabel = f.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+          options = parts[1].split(',').map(o => o.trim());
+        } else {
+          const match = f.match(/\(([^)]+)\)/);
+          if (match) {
+            options = match[1].split('/').map(o => o.trim());
+            cleanLabel = f.replace(/\([^)]+\)/, '').replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase()).trim();
+          }
+        }
+      }
+
+      if (!f || f === 'remarks') return '';
+
+      if (options && options.length > 0) {
         return `
           <div class="col-span-1">
-            <label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1 px-1">${label}</label>
-            <select data-field="${f}" class="dynamic-input w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-[12px] focus:outline-none focus:border-blue-500">
-              <option value="">Select ${label}...</option>
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5 px-1">${cleanLabel}</label>
+            <select data-field="${f}" class="dynamic-input custom-select-trigger" data-btn-class="bg-slate-50 border-slate-200">
+              <option value="">Select ${cleanLabel}...</option>
               ${options.map(o => `<option value="${o}">${o}</option>`).join('')}
             </select>
           </div>
         `;
       }
 
-      const isLarge = f.toLowerCase().includes('description') || f.toLowerCase().includes('action') || f.toLowerCase().includes('remarks') || f.toLowerCase().includes('issue');
+      const fLower = f.toLowerCase();
+      if (!isLarge) {
+        isLarge = fLower.includes('description') || fLower.includes('action') || fLower.includes('remarks') || fLower.includes('issue') || fLower.includes('recommendation');
+      }
+
       if (isLarge) {
         return `
-          <div class="col-span-2">
-            <label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1 px-1">${f}</label>
-            <textarea data-field="${f}" class="dynamic-input w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-[12px] focus:outline-none focus:border-blue-500 resize-none" rows="2" placeholder="Enter ${f.toLowerCase()}"></textarea>
+          <div class="col-span-2 mt-2">
+            <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5 px-1">${cleanLabel}</label>
+            <textarea data-field="${f}" class="dynamic-input w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-[13px] font-medium text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 resize-none transition-all" rows="2" placeholder="Enter ${cleanLabel.toLowerCase()}..."></textarea>
           </div>
         `;
       }
       return `
         <div class="col-span-1">
-          <label class="text-[9px] font-bold text-slate-400 uppercase tracking-widest block mb-1 px-1">${f}</label>
-          <input type="text" data-field="${f}" class="dynamic-input w-full bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 text-[12px] focus:outline-none focus:border-blue-500" placeholder="Enter ${f.toLowerCase()}">
+          <label class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-1.5 px-1">${cleanLabel}</label>
+          <input type="text" data-field="${f}" class="dynamic-input w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-[13px] font-medium text-slate-700 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 transition-all" placeholder="Enter ${cleanLabel.toLowerCase()}...">
         </div>
       `;
     }).join('');
+
+    // After inserting dynamic fields, we must initialize the custom dropdowns for them!
+    if (typeof initCustomDropdowns === 'function') {
+      initCustomDropdowns();
+    }
   }
 
   // --- EASY FILL ENHANCEMENT (DELEGATED) ---
@@ -882,12 +1167,12 @@
   function setModalStatus(status) {
     currentModalStatus = status;
     document.querySelectorAll('.modal-status-btn').forEach(btn => {
-      btn.classList.remove('bg-green-50', 'text-green-700', 'border-green-100', 'bg-blue-50', 'text-blue-700', 'border-blue-100', 'bg-rose-50', 'text-rose-700', 'border-rose-100', 'bg-slate-50', 'text-slate-600', 'border-slate-100');
-      btn.classList.add('bg-slate-50', 'text-slate-600', 'border-slate-100');
+      btn.classList.remove('bg-emerald-50', 'text-emerald-700', 'border-emerald-100', 'bg-blue-50', 'text-blue-700', 'border-blue-100', 'bg-rose-50', 'text-rose-700', 'border-rose-100', 'bg-slate-50', 'text-slate-600', 'border-slate-200');
+      btn.classList.add('bg-slate-50', 'text-slate-600', 'border-slate-200');
     });
 
     const active = document.getElementById('ms-' + status);
-    if (status === 'done') active.classList.add('bg-green-50', 'text-green-700', 'border-green-100');
+    if (status === 'done') active.classList.add('bg-emerald-50', 'text-emerald-700', 'border-emerald-100');
     else if (status === 'wip') active.classList.add('bg-blue-50', 'text-blue-700', 'border-blue-100');
     else active.classList.add('bg-rose-50', 'text-rose-700', 'border-rose-100');
   }
@@ -946,6 +1231,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     initCharts();
+    sortServers();
     // Auto-load first server's logs
     {% if servers %}
     loadServerLog({{ servers.0.id }}, '{{ servers.0.name }}');
@@ -971,26 +1257,31 @@
     }
 
     // Show loading
-    document.getElementById('server-log-loading').classList.remove('hidden');
-    document.getElementById('server-log-table').classList.add('hidden');
-    document.getElementById('server-log-empty').classList.add('hidden');
+    const loadingEl = document.getElementById('server-log-loading');
+    if (loadingEl) loadingEl.classList.remove('hidden');
+    const tableEl = document.getElementById('server-log-table');
+    if (tableEl) tableEl.classList.add('hidden');
+    const emptyEl = document.getElementById('server-log-empty');
+    if (emptyEl) emptyEl.classList.add('hidden');
 
     try {
-      const resp = await fetch(`/api/server/${serverId}/logs/`);
+      const resp = await fetch(`/server_management/api/server/${serverId}/logs/`);
       const data = await resp.json();
       const rows = data.logs;
 
-      document.getElementById('server-log-loading').classList.add('hidden');
+      if (loadingEl) loadingEl.classList.add('hidden');
 
       if (!rows || rows.length === 0) {
-        document.getElementById('server-log-empty').classList.remove('hidden');
+        if (emptyEl) emptyEl.classList.remove('hidden');
         return;
       }
 
       const statusColors = { done: 'bg-emerald-50 text-emerald-700', wip: 'bg-blue-50 text-blue-700', blk: 'bg-rose-50 text-rose-700', miss: 'bg-amber-50 text-amber-700' };
       const statusLabels = { done: 'Done', wip: 'In Progress', blk: 'Blocked', miss: 'Missed' };
 
-      document.getElementById('server-log-rows').innerHTML = rows.map(log => `
+      const rowsEl = document.getElementById('server-log-rows');
+      if (rowsEl) {
+        rowsEl.innerHTML = rows.map(log => `
         <tr class="hover:bg-slate-50/60 transition-colors">
           <td class="px-5 py-3 text-[11px] text-slate-500 whitespace-nowrap font-medium">${log.logged_at}</td>
           <td class="px-5 py-3">
@@ -1006,14 +1297,91 @@
           <td class="px-5 py-3 text-[11px] text-slate-400 max-w-[180px] truncate">${log.notes || '—'}</td>
         </tr>
       `).join('');
+      }
 
-      document.getElementById('server-log-table').classList.remove('hidden');
+      if (tableEl) tableEl.classList.remove('hidden');
     } catch (e) {
-      document.getElementById('server-log-loading').innerHTML = '<span class="text-rose-400 text-[12px]"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Failed to load logs.</span>';
+      console.error(e);
+      if (loadingEl) {
+        loadingEl.classList.remove('hidden');
+        loadingEl.innerHTML = '<span class="text-rose-400 text-[12px]"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Failed to load logs.</span>';
+      }
     }
   }
 
   // Search and Filter Logic
+  function sortServers() {
+    const grid = document.getElementById('server-grid');
+    if (!grid) return;
+    const cards = Array.from(grid.querySelectorAll('.server-card'));
+    const sortVal = document.getElementById('server-sort') ? document.getElementById('server-sort').value : 'important';
+    
+    cards.sort((a, b) => {
+      if (sortVal === 'name') {
+        return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'));
+      } else if (sortVal === 'recent') {
+        const tA = parseInt(a.getAttribute('data-last-active')) || 0;
+        const tB = parseInt(b.getAttribute('data-last-active')) || 0;
+        return tB - tA;
+      } else {
+        const impA = a.getAttribute('data-important') === 'true' ? 1 : 0;
+        const impB = b.getAttribute('data-important') === 'true' ? 1 : 0;
+        if (impA !== impB) return impB - impA;
+        const tA = parseInt(a.getAttribute('data-last-active')) || 0;
+        const tB = parseInt(b.getAttribute('data-last-active')) || 0;
+        return tB - tA;
+      }
+    });
+    
+    cards.forEach(card => grid.appendChild(card));
+  }
+
+  async function toggleImportantServer(serverId) {
+    try {
+      const resp = await fetch('{% url "toggle_important_server" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded', 'X-CSRFToken': CSRF },
+        body: `server_id=${serverId}`
+      });
+      const data = await resp.json();
+      if (data.success) {
+        const card = document.querySelector(`.server-card[data-id="${serverId}"]`);
+        if (card) {
+          card.setAttribute('data-important', data.is_important ? 'true' : 'false');
+          if (data.is_important) {
+            card.classList.remove('border-slate-200', 'hover:shadow-lg', 'hover:border-emerald-200');
+            card.classList.add('border-emerald-400');
+          } else {
+            card.classList.add('border-slate-200', 'hover:shadow-lg', 'hover:border-emerald-200');
+            card.classList.remove('border-emerald-400');
+          }
+        }
+        
+        const ribbon = document.getElementById(`ribbon-${serverId}`);
+        if (ribbon) {
+          if (data.is_important) ribbon.classList.remove('hidden');
+          else ribbon.classList.add('hidden');
+        }
+
+        const header = document.getElementById(`card-header-${serverId}`);
+        if (header) {
+          if (data.is_important) {
+            header.classList.remove('border-slate-100');
+            header.classList.add('border-emerald-200');
+          } else {
+            header.classList.add('border-slate-100');
+            header.classList.remove('border-emerald-200');
+          }
+        }
+
+        toast(data.is_important ? '🌟 Server marked as important' : 'Server unmarked as important');
+        sortServers();
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   function filterServers() {
     const query = document.getElementById('server-search').value.toLowerCase();
     const cards = document.querySelectorAll('.server-card');
@@ -1062,10 +1430,12 @@
     event.currentTarget.classList.remove('text-slate-500');
 
     cards.forEach(card => {
-      if (status === 'all' || card.getAttribute('data-status') === status) {
+      if (status === 'all') {
         card.style.display = 'block';
+      } else if (status === 'starred') {
+        card.style.display = card.getAttribute('data-important') === 'true' ? 'block' : 'none';
       } else {
-        card.style.display = 'none';
+        card.style.display = card.getAttribute('data-status') === status ? 'block' : 'none';
       }
     });
   }
@@ -1110,6 +1480,9 @@
   function openAddServerModal() {
     document.getElementById('as-name').value = '';
     document.getElementById('as-ip').value = '';
+    document.getElementById('as-port').value = '22';
+    document.getElementById('as-user').value = '';
+    document.getElementById('as-password').value = '';
     document.getElementById('as-error').classList.add('hidden');
     document.getElementById('add-server-modal').classList.remove('hidden');
     setTimeout(() => document.getElementById('as-name').focus(), 100);
@@ -1119,11 +1492,97 @@
     document.getElementById('add-server-modal').classList.add('hidden');
   }
 
+  // ── SERVER DETAILS MODAL ──────────────────────────────────────
+  function openServerDetailsModal(btn) {
+    const card = btn.closest('.server-card');
+    const sId = card.getAttribute('data-id') || '';
+    
+    document.getElementById('sd-id').value = sId;
+    document.getElementById('sd-name').value = card.getAttribute('data-name') || '';
+    document.getElementById('sd-ip').value = card.getAttribute('data-ip') || '';
+    document.getElementById('sd-port').value = card.getAttribute('data-port') || '22';
+    document.getElementById('sd-user').value = card.getAttribute('data-username') || '';
+    
+    const pwdField = document.getElementById('sd-password');
+    pwdField.value = card.getAttribute('data-password') || '';
+    pwdField.type = 'password';
+    document.getElementById('sd-eye-icon').className = 'fa-regular fa-eye text-xs';
+    document.getElementById('sd-error').classList.add('hidden');
+    
+    document.getElementById('server-details-modal').classList.remove('hidden');
+  }
+
+  async function submitUpdateServer() {
+    const sId = document.getElementById('sd-id').value;
+    if (!sId) return;
+    
+    const name = document.getElementById('sd-name').value.trim();
+    const ip = document.getElementById('sd-ip').value.trim();
+    const port = document.getElementById('sd-port').value.trim();
+    const user = document.getElementById('sd-user').value.trim();
+    const password = document.getElementById('sd-password').value.trim();
+    
+    if (!name) {
+      document.getElementById('sd-error-msg').textContent = 'Server name is required.';
+      document.getElementById('sd-error').classList.remove('hidden');
+      return;
+    }
+    
+    const resp = await fetch(`/server_management/api/server/${sId}/update/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
+      body: JSON.stringify({ name, ip_address: ip, port_number: port, username: user, server_password: password })
+    });
+
+    const data = await resp.json();
+    if (data.success) {
+      toast('✅ Server details updated successfully!');
+      closeServerDetailsModal();
+      setTimeout(() => location.reload(), 800);
+    } else {
+      document.getElementById('sd-error-msg').textContent = data.error || 'Failed to update server.';
+      document.getElementById('sd-error').classList.remove('hidden');
+    }
+  }
+
+  function closeServerDetailsModal() {
+    document.getElementById('server-details-modal').classList.add('hidden');
+  }
+
+  function toggleSdPwd() {
+    const f = document.getElementById('sd-password');
+    const i = document.getElementById('sd-eye-icon');
+    if (f.type === 'password') {
+      f.type = 'text'; i.className = 'fa-regular fa-eye-slash text-xs';
+    } else {
+      f.type = 'password'; i.className = 'fa-regular fa-eye text-xs';
+    }
+  }
+
+  function toggleAsPwd() {
+    const f = document.getElementById('as-password');
+    const i = document.getElementById('as-eye-icon');
+    if (f.type === 'password') {
+      f.type = 'text'; i.className = 'fa-regular fa-eye-slash text-sm';
+    } else {
+      f.type = 'password'; i.className = 'fa-regular fa-eye text-sm';
+    }
+  }
+
   async function submitAddServer() {
     const name = document.getElementById('as-name').value.trim();
     const ip = document.getElementById('as-ip').value.trim();
+    const port = document.getElementById('as-port').value.trim();
+    const user = document.getElementById('as-user').value.trim();
+    const password = document.getElementById('as-password').value.trim();
     const ownerEl = document.getElementById('as-owner');
     const owner_id = ownerEl ? ownerEl.value : null;
+    
+    const assignedEl = document.getElementById('as-assigned');
+    let assigned_users = [];
+    if (assignedEl) {
+      assigned_users = Array.from(assignedEl.selectedOptions).map(opt => opt.value);
+    }
 
     if (!name) {
       document.getElementById('as-error-msg').textContent = 'Server name is required.';
@@ -1134,7 +1593,7 @@
     const resp = await fetch('{% url "create_server" %}', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body: JSON.stringify({ name, ip_address: ip, owner_id })
+      body: JSON.stringify({ name, ip_address: ip, port_number: port, username: user, server_password: password, owner_id, assigned_users })
     });
 
     const data = await resp.json();
@@ -1149,15 +1608,15 @@
   }
 
   // ── REASSIGN SERVER ──────────────────────────────────────────
-  function openReassignModal(serverId, serverName, currentOwnerId) {
+  function openReassignModal(btn, serverId, serverName, currentOwnerId) {
     document.getElementById('reassign-server-id').value = serverId;
     document.getElementById('reassign-server-name').textContent = serverName;
     document.getElementById('reassign-error').classList.add('hidden');
-    
+
     // Hide the current owner from the dropdown
     const select = document.getElementById('reassign-owner');
     let firstVisible = -1;
-    
+
     Array.from(select.options).forEach((opt, idx) => {
       if (opt.value == currentOwnerId) {
         opt.style.display = 'none';
@@ -1168,11 +1627,19 @@
         if (firstVisible === -1) firstVisible = idx;
       }
     });
-
-    // Auto-select the first available person who ISN'T the current owner
-    if (firstVisible !== -1) {
-      select.selectedIndex = firstVisible;
+    
+    // Select current owner logic
+    select.value = currentOwnerId;
+    if (select.selectedIndex === -1 && firstVisible !== -1) {
+       select.selectedIndex = firstVisible;
     }
+    
+    // Set assigned users
+    const assignedIds = (btn.getAttribute('data-assigned') || '').split(',').filter(x => x.trim() !== '');
+    const assignedSelect = document.getElementById('reassign-assigned');
+    Array.from(assignedSelect.options).forEach(opt => {
+        opt.selected = assignedIds.includes(opt.value);
+    });
 
     document.getElementById('reassign-modal').classList.remove('hidden');
   }
@@ -1184,11 +1651,17 @@
   async function submitReassign() {
     const serverId = document.getElementById('reassign-server-id').value;
     const ownerId = document.getElementById('reassign-owner').value;
+    
+    const assignedEl = document.getElementById('reassign-assigned');
+    let assigned_users = [];
+    if (assignedEl) {
+      assigned_users = Array.from(assignedEl.selectedOptions).map(opt => opt.value);
+    }
 
-    const resp = await fetch(`/api/server/${serverId}/reassign/`, {
+    const resp = await fetch(`/server_management/api/server/${serverId}/reassign/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF },
-      body: JSON.stringify({ owner_id: ownerId })
+      body: JSON.stringify({ owner_id: ownerId, assigned_users })
     });
 
     const data = await resp.json();
@@ -1203,9 +1676,162 @@
   }
 
   // Close modal on backdrop click
-  document.getElementById('reassign-modal').addEventListener('click', function (e) {
-    if (e.target === this) closeReassignModal();
+  const reassignModalEl = document.getElementById('reassign-modal');
+  if (reassignModalEl) {
+    reassignModalEl.addEventListener('click', function (e) {
+      if (e.target === this) closeReassignModal();
+    });
+  }
+
+  // Maintenance Procedure Modal Logic
+  function openMaintenanceModal() {
+    document.getElementById('maintenance-modal').classList.remove('hidden');
+  }
+
+  function closeMaintenanceModal() {
+    document.getElementById('maintenance-modal').classList.add('hidden');
+  }
+
+  document.getElementById('maintenance-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeMaintenanceModal();
   });
 
+  // Live Probe for individual server card
+  async function runCardServerProbe(e, serverId, btn) {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (!btn || btn.disabled) return;
+    const icon = btn.querySelector('i');
+    btn.disabled = true;
+    if (icon) {
+      icon.classList.add('fa-spin', 'text-emerald-600');
+    }
+
+    try {
+      const res = await fetch(`/api/server/${serverId}/probe/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        }
+      });
+      const data = await res.json();
+      if (data.success) {
+        if (icon) {
+          icon.classList.remove('fa-spin', 'fa-rotate');
+          icon.classList.add('fa-check', 'text-emerald-600');
+        }
+        setTimeout(() => {
+          window.location.reload();
+        }, 800);
+      } else {
+        alert(data.error || 'Check failed for this server.');
+        if (icon) icon.classList.remove('fa-spin', 'text-emerald-600');
+        btn.disabled = false;
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error while running probe.');
+      if (icon) icon.classList.remove('fa-spin', 'text-emerald-600');
+      btn.disabled = false;
+    }
+  }
+
+  // Main Trigger: Bulk check across servers (important-only or all fleet)
+  async function runAllServersCheck(importantOnly = false) {
+    const isImp = Boolean(importantOnly);
+    const btn = isImp 
+      ? document.getElementById('btn-run-important-checks') 
+      : document.getElementById('btn-run-all-checks');
+    const spinner = isImp 
+      ? document.getElementById('important-check-spinner') 
+      : document.getElementById('all-check-spinner');
+    const text = isImp 
+      ? document.getElementById('important-check-text') 
+      : document.getElementById('all-check-text');
+    const origText = text ? text.textContent : '';
+
+    if (btn) btn.disabled = true;
+    if (spinner) spinner.classList.add('fa-spin');
+    if (text) text.textContent = isImp ? 'Checking Important...' : 'Checking All Fleet...';
+
+    try {
+      const res = await fetch(`{% url 'run_all_servers_check_api' %}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({ important_only: isImp })
+      });
+      const data = await res.json();
+      if (data.success && data.summary) {
+        const s = data.summary;
+        if (text) text.textContent = `Completed (${s.successful}/${s.total})`;
+        if (spinner) {
+          spinner.classList.remove('fa-spin', 'fa-rotate');
+          spinner.classList.add('fa-check');
+        }
+        if (btn) {
+          btn.classList.remove('bg-emerald-50', 'bg-amber-50', 'text-emerald-700', 'text-amber-800');
+          btn.classList.add('bg-emerald-600', 'text-white', 'border-emerald-600');
+        }
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
+      } else {
+        alert(data.error || 'Failed to complete server checks.');
+        if (spinner) spinner.classList.remove('fa-spin');
+        if (text) text.textContent = origText;
+        if (btn) btn.disabled = false;
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Network error while triggering server check.');
+      if (spinner) spinner.classList.remove('fa-spin');
+      if (text) text.textContent = origText;
+      if (btn) btn.disabled = false;
+    }
+  }
+
 </script>
+
+<!-- MAINTENANCE PROCEDURE MODAL -->
+<div id="maintenance-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center hidden opacity-100 transition-opacity p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[85vh] flex flex-col border border-slate-200 overflow-hidden transform scale-100 transition-transform">
+    
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center border border-indigo-100 shadow-sm">
+          <i class="fa-regular fa-file-pdf text-indigo-500 text-lg"></i>
+        </div>
+        <div>
+          <h2 class="text-[16px] font-bold text-slate-800">Server Maintenance Procedure</h2>
+          <p class="text-[12px] text-slate-500 font-medium">Standard Operating Procedures</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <a href="{% static 'tracker/Server_Maintenance_Procedure.pdf' %}" target="_blank"
+           class="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 hover:border-indigo-200 border border-transparent rounded-lg text-[13px] font-bold transition-all shadow-sm">
+          <i class="fa-solid fa-arrow-up-right-from-square text-[11px]"></i> Open in New Tab
+        </a>
+        <button type="button" onclick="closeMaintenanceModal()"
+          class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-200 hover:text-slate-700 transition-colors">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+    </div>
+
+    <!-- PDF Viewer -->
+    <div class="flex-1 bg-slate-100/50 relative p-4">
+      <div class="absolute inset-4 rounded-xl overflow-hidden shadow-inner border border-slate-200/60 bg-white">
+        <iframe src="{% static 'tracker/Server_Maintenance_Procedure.pdf' %}#toolbar=0" class="w-full h-full border-0 bg-white"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}

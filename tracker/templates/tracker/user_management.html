@@ -1,27 +1,43 @@
 {% extends 'tracker/base.html' %}
-{% block title %}User Management — DevOps R&R Tracker{% endblock %}
-{% block header_title %}User Management{% endblock %}
+{% block title %}Team Overview — Server Management{% endblock %}
+{% block header_title %}Team Overview{% endblock %}
 
 {% block extra_head %}
 <style>
-  .user-card { background: white; border-radius: 14px; border: 1px solid #e2e8f0; overflow: hidden; }
-  .user-table-row { display: grid; grid-template-columns: 200px 120px 1fr 100px 100px; gap: 12px; align-items: center; padding: 13px 18px; border-bottom: 1px solid #f1f5f9; font-size: 13px; }
+  .user-card { background: white; border-radius: 8px; border: 1px solid #e2e8f0; overflow: hidden; }
+  .user-table-row { display: grid; grid-template-columns: 250px 1fr 150px; gap: 16px; align-items: center; padding: 14px 20px; border-bottom: 1px solid #f1f5f9; font-size: 13px; transition: background 0.15s; }
   .user-table-row:last-child { border-bottom: none; }
   .user-table-row:hover { background: #f8fafc; }
-  .role-badge { padding: 3px 10px; border-radius: 99px; font-size: 11px; font-weight: 600; display: inline-block; }
-  .badge-manager { background: #fef3c7; color: #92400e; }
-  .badge-tl { background: #ede9fe; color: #5b21b6; }
-  .badge-developer { background: #dbeafe; color: #1d4ed8; }
-  .form-input { width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 14px; font-size: 13px; color: #0f172a; outline: none; transition: border-color .15s; }
-  .form-input:focus { border-color: #3b82f6; background: #fff; }
+  .role-badge { padding: 4px 0; width: 90px; text-align: center; border-radius: 6px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #e2e8f0; }
+  .badge-manager { background: #ecfdf5; color: #047857; border-color: #d1fae5; }
+  .badge-tl { background: #f8fafc; color: #334155; border-color: #e2e8f0; }
+  .badge-developer { background: #f1f5f9; color: #475569; border-color: #e2e8f0; }
+  .form-input { width: 100%; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 10px 14px; font-size: 13px; color: #0f172a; outline: none; transition: border-color .15s; }
+  .form-input:focus { border-color: #10b981; background: #fff; }
   .form-label { display: block; font-size: 11.5px; font-weight: 600; color: #475569; margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
-  .btn-primary { background: #1e3a5f; color: white; border: none; border-radius: 10px; padding: 11px 20px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; }
-  .btn-primary:hover { background: #0d1b2e; }
-  .btn-danger { background: #fef2f2; color: #dc2626; border: none; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s; }
-  .btn-danger:hover { background: #fee2e2; }
-  .alert-msg { padding: 12px 16px; border-radius: 10px; font-size: 13px; font-weight: 500; margin-bottom: 16px; }
-  .alert-success { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-  .alert-error { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+  .btn-primary { background: #10b981; color: white; border: none; border-radius: 6px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; transition: background .15s; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+  .btn-primary:hover { background: #059669; }
+  .btn-danger { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all .15s; }
+  .btn-danger:hover { background: #ffe4e6; color: #e11d48; border-color: #fecdd3; }
+  .alert-msg { padding: 12px 16px; border-radius: 6px; font-size: 13px; font-weight: 500; margin-bottom: 16px; }
+  .alert-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+  .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+
+  /* Modal Styles */
+  .modal-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.5); backdrop-filter: blur(4px);
+    z-index: 1000; display: none; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.2s ease;
+  }
+  .modal-overlay.active { display: flex; opacity: 1; }
+  .modal-content {
+    background: white; border-radius: 16px; width: 100%; max-width: 600px;
+    padding: 24px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    transform: scale(0.95) translateY(10px); transition: all 0.2s ease;
+    max-height: 90vh; overflow-y: auto;
+  }
+  .modal-overlay.active .modal-content { transform: scale(1) translateY(0); }
 </style>
 {% endblock %}
 
@@ -30,29 +46,32 @@
 
 
 
-  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-    <!-- ── Create User Form ── -->
-    <div>
-      <div class="user-card p-6">
-        <div class="font-bold text-slate-900 text-[15px] mb-1">
-          <i class="fa-solid fa-user-plus text-blue-500 mr-2"></i>Create New User
+  <!-- ── Create User Modal ── -->
+  <div class="modal-overlay" id="createUserModal" onclick="closeModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()">
+      <div class="flex justify-between items-center mb-5">
+        <div class="font-bold text-slate-900 text-[18px]">
+          <i class="fa-solid fa-user-plus text-emerald-500 mr-2"></i>Create New User
         </div>
-        <p class="text-slate-400 text-xs mb-5">
-          {% if viewer_role == 'tl' %}
-            As Team Lead, you can create Developer accounts.
-          {% else %}
-            As Manager, you can create any role.
-          {% endif %}
-        </p>
+        <button type="button" onclick="closeModal()" class="text-slate-400 hover:text-slate-700">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      
+      <p class="text-slate-500 text-xs mb-5">
+        {% if viewer_role == 'tl' %}
+          As Team Lead, you can create Developer accounts.
+        {% else %}
+          As Manager, you can create any role.
+        {% endif %}
+      </p>
 
-        <form method="post" id="create-user-form">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="create_user">
+      <form method="post" id="create-user-form">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_user">
 
-          <div class="space-y-4">
-
-
+        <div class="space-y-5">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="form-label">Username *</label>
               <input type="text" name="username" class="form-input" placeholder="john.doe" required>
@@ -62,12 +81,12 @@
               <label class="form-label">Email</label>
               <input type="email" name="email" class="form-input" placeholder="john@example.com">
             </div>
+          </div>
 
-
-
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label class="form-label">Role *</label>
-              <select name="role" class="form-input" {% if viewer_role == 'tl' %}disabled{% endif %}>
+              <select name="role" id="role-select" class="form-input custom-select-trigger" data-btn-class="bg-white border-slate-200" {% if viewer_role == 'tl' %}disabled{% endif %} onchange="toggleResetCheckbox()">
                 <option value="developer" selected>Developer</option>
                 {% if viewer_role == 'manager' %}
                 <option value="tl">Team Lead</option>
@@ -75,22 +94,8 @@
                 {% endif %}
               </select>
               {% if viewer_role == 'tl' %}
-              <input type="hidden" name="role" value="developer">
+              <input type="hidden" name="role" id="role-hidden" value="developer">
               {% endif %}
-            </div>
-
-            <div>
-              <label class="form-label">Assign Servers</label>
-              <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 max-h-40 overflow-y-auto space-y-2">
-                {% for srv in all_servers %}
-                <label class="flex items-center gap-2 cursor-pointer group">
-                  <input type="checkbox" name="assigned_servers" value="{{ srv.id }}" class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
-                  <span class="text-xs text-slate-600 group-hover:text-slate-900">{{ srv.name }} <span class="text-[10px] text-slate-400">({{ srv.ip_address }})</span></span>
-                </label>
-                {% empty %}
-                <p class="text-[10px] text-slate-400 italic">No servers available for assignment.</p>
-                {% endfor %}
-              </div>
             </div>
 
             <div>
@@ -102,43 +107,111 @@
                 </button>
               </div>
             </div>
+          </div>
 
-            <button type="submit" class="btn-primary w-full">
-              <i class="fa-solid fa-user-plus mr-2"></i>Create Account
+          <div>
+            <label class="form-label">Assign Servers</label>
+            <div class="bg-slate-50 border border-slate-200 rounded-lg p-3 max-h-32 overflow-y-auto mb-4">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {% for srv in all_servers %}
+                <label class="flex items-center gap-2 cursor-pointer group">
+                  <input type="checkbox" name="assigned_servers" value="{{ srv.id }}" class="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500">
+                  <span class="text-xs text-slate-600 group-hover:text-slate-900">{{ srv.name }} <span class="text-[10px] text-slate-400">({{ srv.ip_address }})</span></span>
+                </label>
+                {% empty %}
+                <p class="text-[10px] text-slate-400 italic">No servers available for assignment.</p>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div id="reset-password-permission" class="flex items-start gap-2 bg-emerald-50/50 p-3 rounded-lg border border-emerald-100">
+              <input type="checkbox" name="can_reset_passwords" id="can_reset_passwords" class="mt-0.5 w-4 h-4 rounded border-emerald-300 text-emerald-600 focus:ring-emerald-500">
+              <div>
+                <label for="can_reset_passwords" class="text-xs font-bold text-slate-700 cursor-pointer block">Allow resetting other users' passwords</label>
+                <p class="text-[10px] text-slate-500 leading-tight mt-0.5">If checked, this developer can reset team member passwords.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <button type="submit" class="btn-primary w-full py-3">
+              <i class="fa-solid fa-user-plus"></i> Create Account
             </button>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
     </div>
+  </div>
 
-    <!-- ── Users Table ── -->
-    <div class="lg:col-span-2">
+  <!-- RESET PASSWORD MODAL -->
+  <div class="modal-overlay" id="resetPasswordModal" onclick="closeResetModal(event)">
+    <div class="modal-content" onclick="event.stopPropagation()" style="max-width:400px;">
+      <div class="flex justify-between items-center mb-5">
+        <div class="font-bold text-slate-900 text-[16px]">
+          <i class="fa-solid fa-key text-emerald-500 mr-2"></i>Reset Password
+        </div>
+        <button type="button" onclick="closeResetModal()" class="text-slate-400 hover:text-slate-700">
+          <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+      </div>
+      <p class="text-slate-500 text-xs mb-4">Reset password for <strong id="reset-target-username"></strong>.</p>
+      
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="reset_password">
+        <input type="hidden" name="user_id" id="reset-user-id">
+        <div class="mb-4">
+          <label class="form-label">New Password *</label>
+          <div class="relative">
+            <input type="password" name="new_password" id="reset-password-field" class="form-input" required placeholder="Enter new password">
+            <button type="button" onclick="toggleResetPwd()" class="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600">
+              <i class="fa-regular fa-eye text-sm" id="reset-eye-icon"></i>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn-primary w-full py-2.5">
+          <i class="fa-solid fa-check"></i> Reset Password
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- ── Users Table ── -->
+  <div>
       <div class="user-card">
-        <div class="px-6 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div class="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
           <div>
             <div class="font-bold text-slate-900 text-[15px]">All Team Members</div>
             <div class="text-slate-400 text-xs">{{ all_users.count }} total accounts</div>
           </div>
-          <input type="text" id="user-search" placeholder="Search users..." oninput="filterUsers()"
-                 class="form-input" style="width:180px; padding:7px 12px;">
+          <div class="flex gap-3">
+            <div class="relative">
+              <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-[11px]"></i>
+              <input type="text" id="user-search" placeholder="Search users..." onkeyup="filterUsers()"
+                     class="form-input" style="width:200px; padding:9px 12px 9px 32px;">
+            </div>
+            {% if viewer_role == 'manager' or viewer_role == 'tl' %}
+            <button onclick="openModal()" class="btn-primary" style="padding: 9px 18px;">
+              <i class="fa-solid fa-user-plus"></i> Add User
+            </button>
+            {% endif %}
+          </div>
         </div>
 
         <!-- Table header -->
-        <div class="user-table-row" style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:.05em; background:#f8fafc;">
-          <span>Member</span>
-          <span>Role</span>
-          <span>Email Address</span>
-          <span class="text-center">Status</span>
-          {% if viewer_role == 'manager' %}<span class="text-center">Actions</span>{% endif %}
-        </div>
+    <div class="user-table-row hidden md:grid" style="font-size:11px; color:#64748b; font-weight:700; text-transform:uppercase; letter-spacing:.05em; background:#f8fafc; border-top:1px solid #e2e8f0; border-bottom:1px solid #e2e8f0;">
+      <span>Member</span>
+      <span>Role</span>
+      <span class="text-center">Actions</span>
+    </div>
 
         <div id="user-list">
           {% for u in all_users %}
           <div class="user-table-row user-row" data-name="{{ u.get_full_name|lower }} {{ u.username|lower }}">
             <!-- Member -->
             <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
-                   style="background: {% if u.developer.avatar_gradient %}{{ u.developer.avatar_gradient }}{% else %}linear-gradient(135deg,#2563eb,#06b6d4){% endif %}">
+              <div class="w-8 h-8 rounded flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                   style="background: {% if u.developer.avatar_gradient %}{{ u.developer.avatar_gradient }}{% else %}linear-gradient(135deg,#0f172a,#1e293b){% endif %}">
                 {% if u.developer.initials %}{{ u.developer.initials }}{% else %}{{ u.username|slice:":2"|upper }}{% endif %}
               </div>
               <div>
@@ -156,41 +229,38 @@
               </span>
             </div>
 
-            <!-- Info -->
-            <div>
-              <div class="text-slate-700 font-medium text-[12px] truncate">{{ u.email|default:"No email provided" }}</div>
-            </div>
-
-            <!-- Status -->
-            <div class="text-center">
-              {% if u.is_active %}
-              <span class="px-2 py-1 bg-green-100 text-green-700 rounded-full text-[11px] font-semibold">Active</span>
-              {% else %}
-              <span class="px-2 py-1 bg-slate-100 text-slate-500 rounded-full text-[11px] font-semibold">Inactive</span>
+            <!-- Actions -->
+            <div class="text-center flex justify-center gap-2 items-center">
+              {% if u.id == request.user.id or viewer_role == 'manager' or viewer_role == 'tl' or request.user.developer.can_reset_passwords %}
+              <button onclick="openResetPasswordModal('{{ u.id }}', '{{ u.username }}')" class="btn-secondary px-2 py-1" title="Reset Password" style="background:#ecfdf5; color:#10b981; border:1px solid #a7f3d0;">
+                <i class="fa-solid fa-key text-[11px]"></i>
+              </button>
               {% endif %}
-            </div>
-
-            <!-- Actions (manager only) -->
-            {% if viewer_role == 'manager' %}
-            <div class="text-center">
-              {% if u.id != request.user.id %}
-              <form method="post" style="display:inline;" onsubmit="return confirm('Deactivate {{ u.username }}?')">
+              
+              {% if viewer_role == 'manager' and u.id != request.user.id %}
+              <form method="post" onsubmit="return confirm('Deactivate {{ u.username }}?')" class="inline-block">
                 {% csrf_token %}
                 <input type="hidden" name="action" value="deactivate_user">
                 <input type="hidden" name="user_id" value="{{ u.id }}">
-                <button type="submit" class="btn-danger" {% if not u.is_active %}disabled style="opacity:.4"{% endif %}>
+                <button type="submit" class="btn-danger px-2 py-1" title="Deactivate User" {% if not u.is_active %}disabled style="opacity:.4"{% endif %}>
                   <i class="fa-solid fa-ban text-[11px]"></i>
                 </button>
               </form>
-              {% else %}
-              <span class="text-slate-300 text-xs">You</span>
+              <form method="post" onsubmit="return confirm('Are you sure you want to PERMANENTLY REMOVE {{ u.username }}? This action cannot be undone and will delete all their data.')" class="inline-block">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_user">
+                <input type="hidden" name="user_id" value="{{ u.id }}">
+                <button type="submit" class="btn-danger px-2 py-1" title="Remove User completely">
+                  <i class="fa-solid fa-trash-can text-[11px]"></i>
+                </button>
+              </form>
               {% endif %}
             </div>
-            {% endif %}
           </div>
           {% empty %}
           <div class="py-10 text-center text-slate-400 text-sm">No users found.</div>
           {% endfor %}
+        </div>
         </div>
       </div>
     </div>
@@ -213,11 +283,83 @@
     }
   }
 
+  function toggleResetCheckbox() {
+    const roleSelect = document.getElementById('role-select');
+    const permDiv = document.getElementById('reset-password-permission');
+    if (roleSelect && roleSelect.value !== 'developer') {
+      permDiv.style.display = 'none';
+    } else {
+      permDiv.style.display = 'flex';
+    }
+  }
+
+  // If a custom select is used that overrides onchange, we observe value changes or click events on custom options.
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('.custom-option')) {
+      setTimeout(toggleResetCheckbox, 50); // slight delay to allow select value update
+    }
+  });
+
+  document.addEventListener('DOMContentLoaded', toggleResetCheckbox);
+
   function filterUsers() {
     const q = document.getElementById('user-search').value.toLowerCase();
     document.querySelectorAll('.user-row').forEach(row => {
       row.style.display = row.dataset.name.includes(q) ? '' : 'none';
     });
   }
+
+  // Modal logic
+  const modal = document.getElementById('createUserModal');
+  
+  function openModal() {
+    modal.style.display = 'flex';
+    // Small delay to allow display block to apply before changing opacity for animation
+    setTimeout(() => {
+      modal.classList.add('active');
+    }, 10);
+  }
+
+  function closeModal(e) {
+    if (e && e.target !== modal && e.currentTarget !== modal) {
+      return;
+    }
+    modal.classList.remove('active');
+    setTimeout(() => {
+      modal.style.display = 'none';
+    }, 200); // match transition duration
+  }
+
+  // Reset Password Modal Logic
+  const resetModal = document.getElementById('resetPasswordModal');
+  function openResetPasswordModal(userId, username) {
+    document.getElementById('reset-user-id').value = userId;
+    document.getElementById('reset-target-username').textContent = '@' + username;
+    document.getElementById('reset-password-field').value = '';
+    resetModal.style.display = 'flex';
+    setTimeout(() => { resetModal.classList.add('active'); }, 10);
+  }
+  function closeResetModal(e) {
+    if (e && e.target !== resetModal && e.currentTarget !== resetModal) return;
+    resetModal.classList.remove('active');
+    setTimeout(() => { resetModal.style.display = 'none'; }, 200);
+  }
+  function toggleResetPwd() {
+    const f = document.getElementById('reset-password-field');
+    const i = document.getElementById('reset-eye-icon');
+    if (f.type === 'password') {
+      f.type = 'text'; i.className = 'fa-regular fa-eye-slash text-sm';
+    } else {
+      f.type = 'password'; i.className = 'fa-regular fa-eye text-sm';
+    }
+  }
+
+  // Close on Escape key
+  document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+      if (modal.classList.contains('active')) closeModal();
+      if (resetModal && resetModal.classList.contains('active')) closeResetModal();
+    }
+  });
 </script>
 {% endblock %}

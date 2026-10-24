@@ -1,10 +1,12 @@
+{% load static %}
+{% load tracker_tags %}
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>{% block title %}R&R Tracker{% endblock %}</title>
+  <title>{% block title %}Server Management{% endblock %}</title>
 
   <!-- Fonts -->
   <link
@@ -25,10 +27,10 @@
           },
           colors: {
             navy: {
-              DEFAULT: '#0d1b2e',
-              900: '#0d1b2e',
-              800: '#132338',
-              700: '#1a3a70',
+              DEFAULT: '#0f172a',
+              900: '#0f172a',
+              800: '#1e293b',
+              700: '#334155',
             },
             slate: {
               50: '#f8fafc',
@@ -69,9 +71,9 @@
     }
 
     .nav-link.active {
-      color: #60a5fa;
-      background-color: rgba(59, 130, 246, 0.1);
-      border-left: 3px solid #3b82f6;
+      color: #10b981;
+      background-color: rgba(16, 185, 129, 0.1);
+      border-left: 3px solid #10b981;
     }
 
     .nav-link {
@@ -138,111 +140,239 @@
 
   <!-- SIDEBAR -->
   <aside id="sidebar"
-    class="w-64 min-h-screen bg-navy text-slate-400 fixed left-0 top-0 z-50 flex flex-col border-r border-white/5">
+    class="w-56 min-h-screen bg-navy text-slate-400 fixed left-0 top-0 z-50 flex flex-col border-r border-white/5">
     <!-- Logo -->
-    <div class="px-5 py-5 border-b border-white/10 flex items-center gap-3">
-      <div
-        class="w-10 h-10 bg-gradient-to-br from-blue-600 to-violet-600 rounded-xl flex items-center justify-center flex-shrink-0">
-        <i class="fa-solid fa-layer-group text-white text-base"></i>
+    <div class="px-4 py-4 border-b border-white/10 flex items-center gap-2.5">
+      <div class="w-9 h-9 flex items-center justify-center flex-shrink-0">
+        <img src="{% static 'tracker/server_icon_dashboard.png' %}" alt="Logo" class="w-full h-full object-contain" style="transform: scale(1.05);">
       </div>
-      <div>
-
-        <div class="text-[10px] font-medium text-slate-500 tracking-wider mt-1 uppercase">DevOps R&R Tracker</div>
+      <div class="overflow-hidden">
+        <div class="text-[14.5px] font-extrabold text-white tracking-wider uppercase leading-tight truncate">SERVER MGMT</div>
       </div>
     </div>
 
     <!-- Navigation -->
-    <nav class="flex-1 overflow-y-auto py-4">
-      <div class="px-5 py-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest">Main</div>
+    <nav class="flex-1 overflow-y-auto py-3">
+      <div class="px-4 py-2 text-[10.5px] font-bold text-slate-500 uppercase tracking-widest">Main</div>
       <a href="{% url 'dashboard' %}#dash"
-        class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5 {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
+        class="nav-link flex items-center gap-2.5 px-4 py-2 text-[13.5px] font-medium hover:text-slate-300 hover:bg-white/5 {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}"
         id="link-dash">
         <i class="fa-solid fa-gauge-high w-4 text-center"></i> Dashboard
       </a>
+      {% comment %}
       <a href="{% url 'dashboard' %}#team"
         class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5"
         id="link-team">
-        <i class="fa-solid fa-users w-4 text-center"></i> Team DevOps
+        <i class="fa-solid fa-users w-4 text-center"></i> Team Overview
       </a>
+      {% endcomment %}
 
-      <div class="px-5 pt-5 pb-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest">Tools</div>
+      <div class="px-4 pt-4 pb-2 text-[10.5px] font-bold text-slate-500 uppercase tracking-widest">Tools</div>
       <a href="{% url 'task_log_filter' %}"
-        class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5 {% if request.resolver_match.url_name == 'task_log_filter' %}active{% endif %}"
+        class="nav-link flex items-center gap-2.5 px-4 py-2 text-[13.5px] font-medium hover:text-slate-300 hover:bg-white/5 {% if request.resolver_match.url_name == 'task_log_filter' %}active{% endif %}"
         id="link-logs">
         <i class="fa-solid fa-filter w-4 text-center"></i> Log History
       </a>
+      {% comment %}
+      <a href="{% url 'db_monitoring' %}"
+        class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5 {% if request.resolver_match.url_name == 'db_monitoring' %}active{% endif %}"
+        id="link-db">
+        <i class="fa-solid fa-database w-4 text-center"></i> Database Monitoring
+      </a>
+      {% endcomment %}
 
-      {% if request.user.is_superuser or request.user.is_staff or request.user.developer.role == 'manager' or request.user.developer.role == 'tl' %}
-      <div class="px-5 pt-5 pb-3 text-[10px] font-bold text-slate-600 uppercase tracking-widest">Administration</div>
+      {% if request.user|get_role == 'manager' or request.user|get_role == 'tl' %}
+      <div class="px-4 pt-4 pb-2 text-[10.5px] font-bold text-slate-500 uppercase tracking-widest">Administration</div>
       <a href="{% url 'manager_dashboard' %}"
-        class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5 {% if request.resolver_match.url_name == 'manager_dashboard' %}active{% endif %}"
+        class="nav-link flex items-center gap-2.5 px-4 py-2 text-[13.5px] font-medium hover:text-slate-300 hover:bg-white/5 {% if request.resolver_match.url_name == 'manager_dashboard' %}active{% endif %}"
         id="link-analytics">
         <i class="fa-solid fa-chart-line w-4 text-center"></i> Team Analytics
       </a>
+      <a href="{% url 'developer_performance' %}"
+        class="nav-link flex items-center gap-2.5 px-4 py-2 text-[13.5px] font-medium hover:text-slate-300 hover:bg-white/5 {% if request.resolver_match.url_name == 'developer_performance' %}active{% endif %}"
+        id="link-performance">
+        <i class="fa-solid fa-clipboard-check w-4 text-center"></i> Performance Monitor
+      </a>
       <a href="{% url 'user_management' %}"
-        class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5 {% if request.resolver_match.url_name == 'user_management' %}active{% endif %}"
+        class="nav-link flex items-center gap-2.5 px-4 py-2 text-[13.5px] font-medium hover:text-slate-300 hover:bg-white/5 {% if request.resolver_match.url_name == 'user_management' %}active{% endif %}"
         id="link-users">
         <i class="fa-solid fa-user-gear w-4 text-center"></i> User Management
       </a>
+      {% comment %}
+      <a href="{% url 'task_manager' %}"
+        class="nav-link flex items-center gap-3 px-5 py-2.5 text-[13px] font-medium hover:text-slate-300 hover:bg-white/5 {% if request.resolver_match.url_name == 'task_manager' %}active{% endif %}"
+        id="link-task-manager">
+        <i class="fa-solid fa-list-check w-4 text-center"></i> Task Manager
+      </a>
+      {% endcomment %}
       {% endif %}
     </nav>
 
     <!-- User Section -->
-    <div class="p-4 border-t border-white/10 bg-navy/50">
-      <div class="flex items-center gap-3">
+    <div class="p-3.5 border-t border-white/10 bg-navy/50">
+      <div class="flex items-center gap-2.5">
         <div
-          class="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-600 to-cyan-500 flex items-center justify-center text-white text-xs font-bold shadow-lg">
+          class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-600 to-teal-500 flex items-center justify-center text-white text-xs font-bold shadow-lg flex-shrink-0">
           {{ user.developer.initials|default:"AK" }}
         </div>
         <div class="flex-1 overflow-hidden">
-          <div class="text-white text-[13px] font-semibold leading-tight truncate">{{ user.get_full_name|default:user.username }}</div>
-          <div class="text-slate-500 text-[11px] truncate">
-            {% if user.developer.role == 'manager' %}Manager
-            {% elif user.developer.role == 'tl' %}Team Lead
-            {% else %}{{ user.developer.job_title|default:"DevOps Engineer" }}
-            {% endif %}
+          <div class="text-white text-[12.5px] font-semibold leading-tight truncate">{{ user.get_full_name|default:user.username }}</div>
+          <div class="text-slate-500 text-[10.5px] truncate">
+            {{ user.developer.get_role_display|default:"Developer" }}
           </div>
         </div>
-        <a href="{% url 'logout' %}" class="text-slate-500 hover:text-red-400 transition-colors">
-          <i class="fa-solid fa-right-from-bracket text-[13px]"></i>
+        <a href="{% url 'logout' %}" class="text-slate-500 hover:text-red-400 transition-colors p-1" title="Sign out">
+          <i class="fa-solid fa-right-from-bracket text-[12px]"></i>
         </a>
       </div>
     </div>
   </aside>
 
   <!-- MAIN CONTENT -->
-  <main class="ml-64 flex-1 flex flex-col min-h-screen">
+  <main class="ml-56 flex-1 flex flex-col min-h-screen">
     <!-- TOPBAR -->
     <header
-      class="h-[62px] bg-white border-b border-slate-200 px-6 flex items-center justify-between sticky top-0 z-40">
+      class="h-[54px] bg-white border-b border-slate-200/90 px-6 flex items-center justify-between sticky top-0 z-40 shadow-2xs">
       <div>
-        <h2 class="display text-[17px] font-bold text-slate-900">{% block header_title %}Dashboard{% endblock %}</h2>
-        <div class="text-[11.5px] text-slate-500 mt-0.5">
-          {% now "l, d F Y" %} &nbsp;·&nbsp; Sprint Week {% now "W" %}
+        <h2 class="text-[15.5px] font-bold text-slate-900 tracking-tight leading-tight">{% block header_title %}Server Management{% endblock %}</h2>
+        <div class="text-[11px] text-slate-500 font-medium leading-tight mt-0.5">
+          {% block header_subtitle %}Monitor, Manage and Maintain Your Infrastructure{% endblock %}
         </div>
       </div>
+
       <div class="flex items-center gap-4">
+        <!-- Search Option -->
+        <div class="relative group hidden sm:block">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs group-focus-within:text-emerald-500 transition-colors"></i>
+          <input type="text" id="topbar-search" placeholder="Search servers, IP or hostname..." autocomplete="off"
+            class="w-64 lg:w-80 bg-slate-50/90 border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all placeholder:text-slate-400"
+            onkeyup="handleTopbarSearch(event)">
+        </div>
 
+        <!-- Notification Icon -->
+        {% get_server_notifications user as active_alerts %}
+        <div class="relative" id="notif-dropdown-wrapper">
+          <button id="btn-notif" type="button" onclick="toggleNotifDropdown(event)"
+            class="w-9 h-9 rounded-lg flex items-center justify-center text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
+            title="Notifications">
+            <span class="relative inline-flex items-center justify-center">
+              <i class="fa-regular fa-bell text-[18px]"></i>
+              {% if active_alerts %}
+              <span class="absolute -top-1.5 -right-2 min-w-[16px] h-[16px] px-1 bg-rose-500 text-white text-[9px] font-extrabold rounded-full flex items-center justify-center border-2 border-white shadow-xs leading-none">
+                {{ active_alerts|length }}
+              </span>
+              {% endif %}
+            </span>
+          </button>
 
+          <!-- Notification Dropdown Panel -->
+          <div id="notif-dropdown" class="hidden absolute right-0 mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-50 py-2">
+            <div class="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
+              <span class="text-xs font-bold text-slate-800">Server Alerts</span>
+              {% if active_alerts %}
+              <span class="text-[10px] font-semibold text-rose-600 bg-rose-50 px-2 py-0.5 rounded-full border border-rose-200">
+                {{ active_alerts|length }} Active
+              </span>
+              {% else %}
+              <span class="text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                All Healthy
+              </span>
+              {% endif %}
+            </div>
+
+            <div class="divide-y divide-slate-100 max-h-72 overflow-y-auto">
+              {% if active_alerts %}
+                {% for alert in active_alerts %}
+                <a href="{{ alert.url }}" class="px-4 py-2.5 hover:bg-slate-50 flex items-start gap-2.5 transition-colors block group">
+                  <span class="w-2 h-2 rounded-full {% if alert.level == 'critical' %}bg-rose-500 animate-pulse{% else %}bg-amber-500{% endif %} mt-1.5 flex-shrink-0"></span>
+                  <div class="flex-1 overflow-hidden">
+                    <p class="text-xs font-bold text-slate-900 group-hover:text-emerald-600 transition-colors truncate">
+                      {{ alert.headline }}
+                    </p>
+                    <p class="text-[11px] text-slate-500 mt-0.5 truncate font-mono">
+                      {{ alert.detail }}
+                    </p>
+                  </div>
+                  <span class="text-[10px] text-slate-400 font-medium whitespace-nowrap self-start mt-0.5">{{ alert.time }}</span>
+                </a>
+                {% endfor %}
+              {% else %}
+                <div class="px-4 py-6 text-center text-slate-400">
+                  <i class="fa-solid fa-circle-check text-emerald-500 text-xl mb-1.5 block"></i>
+                  <p class="text-xs font-semibold text-slate-700">All servers operational</p>
+                  <p class="text-[11px] text-slate-400 mt-0.5">No active alerts or critical issues</p>
+                </div>
+              {% endif %}
+            </div>
+
+            <div class="px-4 pt-2 border-t border-slate-100 flex items-center justify-between text-[11px]">
+              <a href="{% url 'dashboard' %}" class="font-semibold text-slate-600 hover:text-slate-900">View Fleet</a>
+              <a href="{% url 'task_log_filter' %}" class="font-semibold text-emerald-600 hover:text-emerald-700">Audit Logs &rarr;</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Profile Section -->
+        <div class="relative" id="profile-dropdown-wrapper">
+          <button id="btn-profile" type="button" onclick="toggleProfileDropdown(event)"
+            class="flex items-center gap-2.5 py-1 px-1.5 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer group">
+            <div class="w-8 h-8 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center shadow-xs flex-shrink-0">
+              {% if user.developer.initials %}{{ user.developer.initials }}{% else %}{{ user.username|slice:":2"|upper }}{% endif %}
+            </div>
+            <div class="text-left hidden sm:block">
+              <div class="text-xs font-bold text-slate-900 leading-tight group-hover:text-emerald-600 transition-colors">
+                {{ user.get_full_name|default:user.username }}
+              </div>
+              <div class="text-[10.5px] text-slate-400 font-medium leading-tight">
+                {{ user.developer.get_role_display|default:"Developer" }}
+              </div>
+            </div>
+            <i class="fa-solid fa-chevron-down text-slate-400 text-[10px] ml-0.5 group-hover:text-slate-600 transition-colors"></i>
+          </button>
+
+          <!-- Profile Dropdown Menu -->
+          <div id="profile-dropdown" class="hidden absolute right-0 mt-2 w-52 bg-white rounded-xl shadow-xl border border-slate-200 z-50 py-1.5">
+            <div class="px-4 py-2 border-b border-slate-100 sm:hidden">
+              <p class="text-xs font-bold text-slate-800">{{ user.get_full_name|default:user.username }}</p>
+              <p class="text-[10px] text-slate-400">{{ user.developer.get_role_display|default:"Developer" }}</p>
+            </div>
+            <div class="py-1">
+              <a href="{% url 'dashboard' %}" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-emerald-600 font-medium">
+                <i class="fa-solid fa-gauge text-slate-400 text-xs w-4"></i> Dashboard
+              </a>
+              {% if request.user|get_role == 'manager' or request.user|get_role == 'tl' %}
+              <a href="{% url 'user_management' %}" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-emerald-600 font-medium">
+                <i class="fa-solid fa-user-gear text-slate-400 text-xs w-4"></i> User Management
+              </a>
+              {% endif %}
+              <a href="{% url 'task_log_filter' %}" class="flex items-center gap-2 px-4 py-2 text-xs text-slate-700 hover:bg-slate-50 hover:text-emerald-600 font-medium">
+                <i class="fa-solid fa-list-check text-slate-400 text-xs w-4"></i> Task Logs
+              </a>
+            </div>
+            <div class="border-t border-slate-100 py-1">
+              <a href="{% url 'logout' %}" class="flex items-center gap-2 px-4 py-2 text-xs text-rose-600 hover:bg-rose-50 font-medium">
+                <i class="fa-solid fa-right-from-bracket text-xs w-4"></i> Sign Out
+              </a>
+            </div>
+          </div>
+        </div>
       </div>
     </header>
 
     <!-- PAGE CONTENT -->
     <div class="flex-1 p-6 fade-in">
       {% if messages %}
-        <div class="mb-5 space-y-3">
-          {% for message in messages %}
-            <div class="p-3.5 rounded-xl border flex items-center gap-3 text-sm font-medium
-              {% if message.tags == 'success' %}bg-emerald-50 border-emerald-100 text-emerald-700
-              {% elif message.tags == 'error' %}bg-rose-50 border-rose-100 text-rose-700
-              {% else %}bg-blue-50 border-blue-100 text-blue-700{% endif %}">
-              {% if message.tags == 'success' %}<i class="fa-solid fa-circle-check text-emerald-500"></i>
-              {% elif message.tags == 'error' %}<i class="fa-solid fa-circle-xmark text-rose-500"></i>
-              {% else %}<i class="fa-solid fa-circle-info text-blue-500"></i>{% endif %}
-              {{ message }}
-            </div>
-          {% endfor %}
-        </div>
+        <script>
+          document.addEventListener("DOMContentLoaded", () => {
+            let delay = 0;
+            {% for message in messages %}
+              setTimeout(() => {
+                toast("{{ message|escapejs }}");
+              }, delay);
+              delay += 3500;
+            {% endfor %}
+          });
+        </script>
       {% endif %}
       {% block content %}{% endblock %}
     </div>
@@ -269,6 +399,160 @@
       console.log('Open Quick Log');
       if (window.openQL) window.openQL();
     }
+  </script>
+
+  <script>
+    // Global Custom Dropdown Component
+    function initCustomDropdowns() {
+      document.querySelectorAll('select.custom-select-trigger:not(.custom-select-initialized)').forEach(select => {
+        select.classList.add('custom-select-initialized');
+        
+        // Generate wrapper
+        const wrapper = document.createElement('div');
+        wrapper.className = 'relative w-full custom-select-wrapper';
+        
+        // Insert wrapper and move select inside
+        select.parentNode.insertBefore(wrapper, select);
+        wrapper.appendChild(select);
+        
+        // Hide original select
+        select.style.display = 'none';
+
+        // Build the trigger button
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        // Check if there are custom classes to inherit
+        const extraClasses = select.getAttribute('data-btn-class') || 'bg-slate-50 border-slate-200';
+        btn.className = `w-full border rounded-xl px-4 py-2.5 text-[13px] font-medium text-slate-700 flex justify-between items-center focus:outline-none focus:border-emerald-500 transition-all hover:shadow-sm ${extraClasses}`;
+        
+        const selectedOpt = select.options[select.selectedIndex] || select.options[0];
+        const btnText = document.createElement('span');
+        btnText.className = 'truncate text-left flex-1 mr-4 font-semibold text-slate-800';
+        btnText.textContent = selectedOpt ? selectedOpt.text : 'Select...';
+        
+        const icon = document.createElement('i');
+        icon.className = 'fa-solid fa-chevron-down text-slate-400 text-[10px] transition-transform duration-200';
+
+        btn.appendChild(btnText);
+        btn.appendChild(icon);
+        wrapper.appendChild(btn);
+
+        // Build the dropdown menu
+        const menu = document.createElement('div');
+        menu.className = 'absolute z-[100] top-[calc(100%+8px)] left-0 w-full bg-white border border-slate-200 rounded-xl shadow-xl overflow-hidden hidden transform opacity-0 transition-all duration-200 translate-y-[-10px] max-h-[250px] overflow-y-auto custom-scrollbar';
+        
+        const ul = document.createElement('ul');
+        ul.className = 'py-1';
+
+        function buildOptions() {
+          ul.innerHTML = '';
+          Array.from(select.options).forEach(opt => {
+            const li = document.createElement('li');
+            const btnOpt = document.createElement('button');
+            btnOpt.type = 'button';
+            btnOpt.className = 'w-full text-left px-4 py-2.5 text-[13px] text-slate-700 font-medium hover:bg-emerald-50 hover:text-emerald-700 transition-colors border-l-2 border-transparent hover:border-emerald-500 focus:outline-none focus:bg-emerald-50';
+            btnOpt.textContent = opt.text;
+            btnOpt.onclick = (e) => {
+              e.stopPropagation();
+              select.value = opt.value;
+              btnText.textContent = opt.text;
+              closeMenu();
+              select.dispatchEvent(new Event('change', { bubbles: true }));
+            };
+            li.appendChild(btnOpt);
+            ul.appendChild(li);
+          });
+          const curr = select.options[select.selectedIndex] || select.options[0];
+          btnText.textContent = curr ? curr.text : 'Select...';
+        }
+
+        buildOptions();
+        menu.appendChild(ul);
+        wrapper.appendChild(menu);
+
+        // Toggle logic
+        function openMenu() {
+          document.querySelectorAll('.custom-select-wrapper .absolute').forEach(m => {
+            if (m !== menu && !m.classList.contains('hidden')) {
+              m.classList.add('hidden', 'opacity-0', 'translate-y-[-10px]');
+              if (m.previousSibling.lastChild) m.previousSibling.lastChild.style.transform = 'rotate(0deg)';
+            }
+          });
+          menu.classList.remove('hidden');
+          setTimeout(() => {
+            menu.classList.remove('opacity-0', 'translate-y-[-10px]');
+            icon.style.transform = 'rotate(180deg)';
+          }, 10);
+        }
+
+        function closeMenu() {
+          menu.classList.add('opacity-0', 'translate-y-[-10px]');
+          icon.style.transform = 'rotate(0deg)';
+          setTimeout(() => menu.classList.add('hidden'), 200);
+        }
+
+        btn.onclick = (e) => {
+          e.stopPropagation();
+          if (menu.classList.contains('hidden')) openMenu();
+          else closeMenu();
+        };
+
+        document.addEventListener('click', (e) => {
+          if (!wrapper.contains(e.target)) closeMenu();
+        });
+        
+        // Auto-update if select changes via JS
+        const observer = new MutationObserver(() => buildOptions());
+        observer.observe(select, { childList: true });
+      });
+    }
+
+    function handleTopbarSearch(e) {
+      const query = e.target.value;
+      const pageSearch = document.getElementById('server-search');
+      if (pageSearch) {
+        pageSearch.value = query;
+        if (typeof filterServers === 'function') {
+          filterServers();
+        }
+      } else if (e.key === 'Enter' && query.trim()) {
+        window.location.href = `{% url 'dashboard' %}?q=${encodeURIComponent(query.trim())}`;
+      }
+    }
+
+    function toggleNotifDropdown(e) {
+      e.stopPropagation();
+      const menu = document.getElementById('notif-dropdown');
+      const profileMenu = document.getElementById('profile-dropdown');
+      if (profileMenu) profileMenu.classList.add('hidden');
+      if (menu) menu.classList.toggle('hidden');
+    }
+
+    function toggleProfileDropdown(e) {
+      e.stopPropagation();
+      const menu = document.getElementById('profile-dropdown');
+      const notifMenu = document.getElementById('notif-dropdown');
+      if (notifMenu) notifMenu.classList.add('hidden');
+      if (menu) menu.classList.toggle('hidden');
+    }
+
+    document.addEventListener('click', function(e) {
+      const notifMenu = document.getElementById('notif-dropdown');
+      const profileMenu = document.getElementById('profile-dropdown');
+      const notifWrapper = document.getElementById('notif-dropdown-wrapper');
+      const profileWrapper = document.getElementById('profile-dropdown-wrapper');
+
+      if (notifMenu && notifWrapper && !notifWrapper.contains(e.target)) {
+        notifMenu.classList.add('hidden');
+      }
+      if (profileMenu && profileWrapper && !profileWrapper.contains(e.target)) {
+        profileMenu.classList.add('hidden');
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", () => {
+      initCustomDropdowns();
+    });
   </script>
 
   {% block extra_scripts %}{% endblock %}

@@ -16,12 +16,23 @@ class TaskLogForm(forms.ModelForm):
 
 
 class ServerHealthForm(forms.ModelForm):
+    server_name = forms.ChoiceField(choices=[], widget=forms.Select(attrs={'class': 'form-field'}))
+
+    def __init__(self, *args, **kwargs):
+        user_servers = kwargs.pop('user_servers', None)
+        super().__init__(*args, **kwargs)
+        if user_servers is not None:
+            choices = [('', '--- Select Server ---')]
+            for s in user_servers:
+                label = f"{s.ip_address or s.name} — {s.name}"
+                choices.append((s.name, label))
+            self.fields['server_name'].choices = choices
+
     class Meta:
         model = ServerHealthEntry
         exclude = ['developer', 'created_at']
         widgets = {
             'date': forms.DateInput(attrs={'type': 'date', 'class': 'form-field'}),
-            'server_name': forms.TextInput(attrs={'class': 'form-field', 'placeholder': 'e.g. prod-server-1'}),
             'cpu_usage': forms.NumberInput(attrs={'class': 'form-field', 'placeholder': '0–100', 'step': '0.01', 'min': '0', 'max': '100'}),
             'memory_usage': forms.NumberInput(attrs={'class': 'form-field', 'placeholder': '0–100', 'step': '0.01', 'min': '0', 'max': '100'}),
             'disk_usage': forms.NumberInput(attrs={'class': 'form-field', 'placeholder': '0–100', 'step': '0.01', 'min': '0', 'max': '100'}),

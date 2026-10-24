@@ -1,0 +1,403 @@
+{% extends 'tracker/base.html' %}
+{% load tracker_tags %}
+{% block title %}Performance Monitor — Server Management{% endblock %}
+{% block header_title %}Performance Monitor{% endblock %}
+
+{% block extra_head %}
+<style>
+  .compliance-cell { border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 11.5px; font-weight: 800; cursor: pointer; transition: all .15s ease; position: relative; }
+  .compliance-cell:hover { transform: translateY(-2px); z-index: 10; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
+  .cell-done { background: #10b981; color: white; border: 1px solid #059669; }
+  .cell-missed { background: #ffe4e6; color: #e11d48; border: 1px solid #fecdd3; }
+  .cell-pending { background: #f8fafc; color: #94a3b8; border: 1px solid #e2e8f0; }
+  .cell-wip { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+  .cell-blk { background: #ffe4e6; color: #e11d48; border: 1px solid #fecdd3; }
+  .stat-ring { width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+  .heatmap-tooltip { position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #0f172a; color: white; padding: 6px 10px; border-radius: 8px; font-size: 10px; font-weight: 600; white-space: nowrap; pointer-events: none; opacity: 0; transition: all .2s; z-index: 20; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
+  .heatmap-tooltip::after { content: ''; position: absolute; top: 100%; left: 50%; margin-left: -4px; border-width: 4px; border-style: solid; border-color: #0f172a transparent transparent transparent; }
+  .compliance-cell:hover .heatmap-tooltip { opacity: 1; transform: translateX(-50%) translateY(-2px); }
+  @media print {
+    aside, header { display: none !important; }
+    main { margin-left: 0 !important; }
+    .no-print { display: none !important; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-[1400px]">
+
+  <!-- ── Header (Matching Dashboard) ── -->
+  <div class="rounded-2xl p-6 mb-6 relative overflow-hidden border border-slate-800 no-print shadow-lg" style="background: linear-gradient(145deg, #0f172a 0%, #1e293b 100%);">
+    <div class="absolute -top-[50px] -right-[50px] w-[200px] h-[200px] rounded-full bg-slate-400/5 pointer-events-none blur-2xl"></div>
+    <div class="absolute -bottom-[40px] right-[150px] w-[150px] h-[150px] rounded-full bg-emerald-500/10 pointer-events-none blur-2xl"></div>
+    
+    <div class="relative z-10 flex items-center justify-between flex-wrap gap-4">
+      <div>
+        <div class="text-emerald-400 text-[11px] font-bold tracking-widest uppercase mb-1.5 flex items-center gap-1.5"><i class="fa-solid fa-chart-pie"></i> Analytics</div>
+        <h1 class="display text-[24px] font-bold text-white leading-tight">Performance Monitor</h1>
+        <p class="text-slate-400 text-[13px] mt-1 font-medium">Track developer task compliance and system coverage</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <!-- Month Navigator -->
+        <div class="flex items-center gap-2 bg-white/10 p-1.5 rounded-xl border border-white/5 backdrop-blur-sm shadow-inner">
+          <a href="?user={{ target_user.id }}&period={{ period }}&month={{ prev_month }}" 
+             class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 hover:text-white hover:bg-white/20 transition-all active:scale-95">
+            <i class="fa-solid fa-chevron-left text-[11px]"></i>
+          </a>
+          <span class="text-[13px] font-bold text-white min-w-[120px] text-center tracking-wide">{{ month_label }}</span>
+          <a href="?user={{ target_user.id }}&period={{ period }}&month={{ next_month }}"
+             class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-300 transition-all {% if month_offset >= 0 %}opacity-30 pointer-events-none{% else %}hover:text-white hover:bg-white/20 active:scale-95{% endif %}">
+            <i class="fa-solid fa-chevron-right text-[11px]"></i>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Layout: Developers + Compliance ── -->
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- LEFT: Developer Roster -->
+    <div class="lg:col-span-3 space-y-4">
+      <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-slate-100 to-transparent rounded-full -translate-y-1/2 translate-x-1/2 opacity-50 pointer-events-none"></div>
+        
+        <div class="flex items-center justify-between mb-5 relative z-10">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-700">
+              <i class="fa-solid fa-users text-xs"></i>
+            </div>
+            <span class="text-[14px] font-bold text-slate-900">Team Roster</span>
+          </div>
+          <span class="text-[11px] font-bold text-slate-600 bg-white border border-slate-200 shadow-sm px-2.5 py-1 rounded-md">{{ dev_list|length }}</span>
+        </div>
+
+        <div class="space-y-2.5 relative z-10">
+          {% for dev in dev_list %}
+          <a href="?user={{ dev.user.id }}&period={{ period }}&month={{ month_offset }}"
+             class="block p-3.5 rounded-xl border transition-all duration-200 group {% if dev.is_active %}border-emerald-500 bg-emerald-50 shadow-md ring-2 ring-emerald-500/20 translate-x-1{% else %}border-slate-100 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm{% endif %}">
+            <div class="flex items-center gap-3.5">
+              <div class="w-10 h-10 rounded-xl flex items-center justify-center text-white text-[12px] font-bold shadow-md flex-shrink-0 transition-transform group-hover:scale-105"
+                   style="background: {{ dev.gradient }}">
+                {{ dev.initials }}
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-[13.5px] font-bold {% if dev.is_active %}text-emerald-900{% else %}text-slate-800{% endif %} leading-tight truncate">
+                  {{ dev.user.get_full_name|default:dev.user.username }}
+                </div>
+                <div class="flex items-center gap-2 mt-1.5">
+                  <span class="text-[9px] font-bold uppercase tracking-widest px-1.5 py-0.5 rounded shadow-sm
+                    {% if dev.role == 'manager' %}bg-emerald-50 text-emerald-700 border border-emerald-200
+                    {% elif dev.role == 'tl' %}bg-slate-100 text-slate-700 border border-slate-300
+                    {% else %}bg-slate-50 text-slate-500 border border-slate-200{% endif %}">
+                    {{ dev.get_role_display }}
+                  </span>
+                  <span class="text-[10px] text-slate-400 font-medium flex items-center gap-1"><i class="fa-solid fa-server text-[8px]"></i> {{ dev.server_count }} node{{ dev.server_count|pluralize }}</span>
+                </div>
+              </div>
+              <div class="text-right">
+                <i class="fa-solid fa-chevron-right text-[10px] {% if dev.is_active %}text-emerald-500{% else %}text-slate-300 group-hover:text-slate-400{% endif %} transition-colors"></i>
+              </div>
+            </div>
+          </a>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Compliance Detail -->
+    <div class="lg:col-span-9 space-y-6">
+
+      {% if target_user %}
+      <!-- Developer Header Card -->
+      <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm relative overflow-hidden group">
+        <div class="absolute top-0 right-0 w-[400px] h-[400px] rounded-full -translate-y-1/2 translate-x-1/3 opacity-20 pointer-events-none transition-transform duration-700 group-hover:scale-110"
+             style="background: radial-gradient(circle, #10b981 0%, transparent 70%);"></div>
+        
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
+          <div class="flex items-center gap-5">
+            <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-white text-xl font-bold shadow-lg border-2 border-white ring-4 ring-slate-50"
+                 style="background: {{ target_user.developer.avatar_gradient|default:'linear-gradient(135deg,#64748b,#475569)' }}">
+              {{ target_user.developer.initials|default:target_user.username|truncatechars:2 }}
+            </div>
+            <div>
+              <h2 class="display text-[22px] font-bold text-slate-900">{{ target_user.get_full_name|default:target_user.username }}</h2>
+              <div class="flex items-center gap-2.5 mt-1.5">
+                <span class="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-md border border-emerald-100 uppercase tracking-widest">{{ target_user.developer.get_role_display|default:"Developer" }}</span>
+                <span class="text-[12px] text-slate-500 font-medium">· {{ month_label }} Metrics</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Period Tabs -->
+          <div class="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200/60 shadow-inner">
+            <a href="?user={{ target_user.id }}&period=d&month={{ month_offset }}"
+               class="px-4 py-2 text-[11.5px] font-bold rounded-lg transition-all flex items-center gap-2 {% if period == 'd' %}bg-white text-emerald-600 shadow-sm border border-slate-200/50 scale-105{% else %}text-slate-500 hover:text-slate-700 hover:bg-slate-200/50{% endif %}">
+              <i class="fa-solid fa-calendar-day"></i> Daily
+            </a>
+            <a href="?user={{ target_user.id }}&period=w&month={{ month_offset }}"
+               class="px-4 py-2 text-[11.5px] font-bold rounded-lg transition-all flex items-center gap-2 {% if period == 'w' %}bg-white text-emerald-600 shadow-sm border border-slate-200/50 scale-105{% else %}text-slate-500 hover:text-slate-700 hover:bg-slate-200/50{% endif %}">
+              <i class="fa-solid fa-calendar-week"></i> Weekly
+            </a>
+            <a href="?user={{ target_user.id }}&period=m&month={{ month_offset }}"
+               class="px-4 py-2 text-[11.5px] font-bold rounded-lg transition-all flex items-center gap-2 {% if period == 'm' %}bg-white text-emerald-600 shadow-sm border border-slate-200/50 scale-105{% else %}text-slate-500 hover:text-slate-700 hover:bg-slate-200/50{% endif %}">
+              <i class="fa-solid fa-calendar-check"></i> Monthly
+            </a>
+          </div>
+        </div>
+
+        <!-- Summary Stats Grid -->
+        {% if target_stats %}
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mt-7 pt-6 border-t border-slate-100 relative z-10">
+          {% for key, stat in target_stats.items %}
+          <div class="bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center gap-4 hover:shadow-md transition-all group">
+            <div class="stat-ring shadow-inner border border-slate-50"
+                 style="background: conic-gradient(#10b981 {{ stat.pct }}%, #f1f5f9 0);">
+              <div class="w-[36px] h-[36px] rounded-full bg-white flex items-center justify-center shadow-sm">
+                <span class="text-[11px] font-extrabold text-emerald-600">{{ stat.pct }}%</span>
+              </div>
+            </div>
+            <div>
+              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{{ stat.label }} Completion</div>
+              <div class="text-[16px] font-bold text-slate-800 leading-tight">{{ stat.done }} <span class="text-[12px] text-slate-400 font-medium">/ {{ stat.total }} Tasks</span></div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- ── DAILY VIEW: Heatmap + Expandable Days ── -->
+      {% if period == 'd' %}
+        {% for server_data in compliance_data %}
+        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300">
+          <div class="px-5 py-4 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3.5">
+              <div class="w-11 h-11 rounded-xl bg-slate-900 flex items-center justify-center text-white text-sm shadow-md border border-slate-700">
+                <i class="fa-solid fa-server"></i>
+              </div>
+              <div>
+                <div class="text-[15px] font-bold text-slate-900">{{ server_data.server.name }}</div>
+                <div class="text-[11px] text-slate-500 font-mono mt-0.5 tracking-wide">{{ server_data.server.ip_address|default:'—' }}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-4 bg-white px-3.5 py-2 rounded-xl border border-slate-200 shadow-sm text-[11.5px] font-bold">
+              <span class="text-emerald-600 flex items-center gap-1.5"><i class="fa-solid fa-check-circle text-emerald-500"></i> {{ server_data.summary.done }} Done</span>
+              <div class="w-px h-4 bg-slate-200"></div>
+              <span class="text-rose-500 flex items-center gap-1.5"><i class="fa-solid fa-times-circle text-rose-500"></i> {{ server_data.summary.missed }} Missed</span>
+              <div class="w-px h-4 bg-slate-200"></div>
+              <span class="text-slate-500">{{ server_data.summary.total }} Total</span>
+            </div>
+          </div>
+
+          <!-- Heatmap Grid -->
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-5">
+              <div class="text-[10.5px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <i class="fa-solid fa-grip text-slate-300"></i> Daily Heatmap
+              </div>
+              <div class="flex items-center gap-4 text-[9px] font-bold text-slate-500 uppercase tracking-widest">
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded shadow-sm bg-[#10b981]"></span> Full</span>
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded shadow-sm bg-[#f1f5f9] border border-[#cbd5e1]"></span> Partial</span>
+                <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded shadow-sm bg-[#ffe4e6] border border-[#fecdd3]"></span> Missed</span>
+              </div>
+            </div>
+            
+            <div class="flex flex-wrap gap-1.5">
+              {% for day in server_data.dates %}
+              <div class="compliance-cell shadow-sm {% if day.done_count == day.total_count %}cell-done{% elif day.done_count > 0 %}cell-wip{% else %}cell-missed{% endif %}"
+                   style="width: 38px; height: 38px; {% if day.is_today %}outline: 2px solid #10b981; outline-offset: 2px;{% endif %}"
+                   onclick="toggleDay('day-{{ server_data.server.id }}-{{ forloop.counter0 }}')">
+                {{ day.date.day }}
+                <div class="heatmap-tooltip">
+                  {{ day.day_name }}, {{ day.date_str }} — {{ day.done_count }}/{{ day.total_count }} Done
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <!-- Expandable Day Details -->
+          {% for day in server_data.dates %}
+          <div id="day-{{ server_data.server.id }}-{{ forloop.counter0 }}" class="hidden border-t border-slate-100 bg-slate-50/50">
+            <div class="px-6 py-3 bg-slate-100/60 flex items-center justify-between border-b border-slate-200">
+              <span class="text-[12.5px] font-bold text-slate-700 flex items-center gap-2">
+                <i class="fa-solid fa-calendar-day text-emerald-500"></i>
+                {{ day.day_name }}, {{ day.date_str }}
+                {% if day.is_today %}<span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-bold rounded-md uppercase tracking-wider ml-1">Today</span>{% endif %}
+              </span>
+              <span class="text-[11px] font-bold text-slate-600 bg-white px-2.5 py-0.5 rounded shadow-sm border border-slate-200">{{ day.done_count }} / {{ day.total_count }} Completed</span>
+            </div>
+            <div class="divide-y divide-slate-100/60">
+              {% for task in day.tasks %}
+              <div class="grid grid-cols-[80px_1fr_90px_100px] gap-4 items-center px-6 py-3.5 text-[13px] hover:bg-white transition-colors cursor-default">
+                <span class="text-[10px] font-bold text-slate-400 font-mono uppercase bg-slate-100 px-2 py-1 rounded-md text-center border border-slate-200/50">{{ task.task_id }}</span>
+                <span class="font-semibold text-slate-700 truncate">{{ task.task_text }}</span>
+                <div class="flex justify-start">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm
+                    {% if task.status == 'done' %}bg-emerald-50 text-emerald-700 border border-emerald-100
+                    {% elif task.status == 'missed' or task.status == 'blk' %}bg-rose-50 text-rose-700 border border-rose-100
+                    {% elif task.status == 'wip' %}bg-slate-100 text-slate-700 border border-slate-300
+                    {% else %}bg-slate-50 text-slate-500 border border-slate-200{% endif %}">
+                    {% if task.status == 'done' %}<i class="fa-solid fa-check text-[9px]"></i>
+                    {% elif task.status == 'missed' or task.status == 'blk' %}<i class="fa-solid fa-xmark text-[9px]"></i>
+                    {% elif task.status == 'pending' %}<i class="fa-solid fa-clock text-[9px]"></i>
+                    {% endif %}
+                    {{ task.status }}
+                  </span>
+                </div>
+                <span class="text-[10.5px] text-slate-400 font-medium text-right font-mono">{{ task.logged_at }}</span>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% empty %}
+        <div class="bg-white border border-slate-200 rounded-2xl p-16 text-center shadow-sm flex flex-col items-center justify-center">
+          <div class="w-20 h-20 rounded-full bg-slate-50 border-2 border-slate-100 flex items-center justify-center mb-5 shadow-inner">
+            <i class="fa-solid fa-server text-slate-300 text-3xl"></i>
+          </div>
+          <h3 class="text-slate-800 text-[18px] font-bold mb-1.5">No Servers Assigned</h3>
+          <p class="text-sm text-slate-500 max-w-sm">This developer has not been assigned any infrastructure nodes to monitor.</p>
+        </div>
+        {% endfor %}
+      {% endif %}
+
+      <!-- ── WEEKLY / MONTHLY VIEWS ── -->
+      {% if period == 'w' or period == 'm' %}
+        {% for server_data in compliance_data %}
+        <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300">
+          <div class="px-5 py-4 bg-gradient-to-r from-slate-50 to-white border-b border-slate-100 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3.5">
+              <div class="w-11 h-11 rounded-xl bg-slate-900 flex items-center justify-center text-white text-sm shadow-md border border-slate-700">
+                <i class="fa-solid fa-server"></i>
+              </div>
+              <div>
+                <div class="text-[15px] font-bold text-slate-900">{{ server_data.server.name }}</div>
+                <div class="text-[11px] text-slate-500 font-mono mt-0.5 tracking-wide">{{ server_data.server.ip_address|default:'—' }}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-4 bg-white px-3.5 py-2 rounded-xl border border-slate-200 shadow-sm text-[11.5px] font-bold">
+              <span class="text-emerald-600 flex items-center gap-1.5"><i class="fa-solid fa-check-circle text-emerald-500"></i> {{ server_data.summary.done }}</span>
+              <div class="w-px h-4 bg-slate-200"></div>
+              <span class="text-rose-500 flex items-center gap-1.5"><i class="fa-solid fa-times-circle text-rose-500"></i> {{ server_data.summary.missed }}</span>
+            </div>
+          </div>
+
+          {% if period == 'w' %}
+            <div class="divide-y divide-slate-100">
+              {% for week in server_data.weeks %}
+              <div>
+                <div class="px-6 py-4 bg-white flex items-center justify-between cursor-pointer hover:bg-slate-50 transition-colors group"
+                     onclick="toggleDay('week-{{ server_data.server.id }}-{{ forloop.counter0 }}')">
+                  <span class="text-[13.5px] font-bold text-slate-800 flex items-center gap-3">
+                    <span class="w-8 h-8 rounded-lg bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-500 shadow-sm group-hover:scale-105 transition-transform"><i class="fa-solid fa-calendar-week"></i></span>
+                    {{ week.label }}
+                  </span>
+                  <div class="flex items-center gap-4">
+                    <span class="text-[11.5px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-2.5 py-1 rounded-md">{{ week.done_count }} / {{ week.total_count }} Done</span>
+                    <i class="fa-solid fa-chevron-down text-slate-300 text-[11px] group-hover:text-slate-500 transition-colors"></i>
+                  </div>
+                </div>
+                <div id="week-{{ server_data.server.id }}-{{ forloop.counter0 }}" class="hidden bg-slate-50/70 border-t border-slate-100 divide-y divide-slate-100/60 shadow-inner">
+                  {% for task in week.tasks %}
+                  <div class="grid grid-cols-[80px_1fr_90px_120px] gap-4 items-center px-6 py-3 text-[13px] hover:bg-white transition-colors">
+                    <span class="text-[10px] font-bold text-slate-400 font-mono uppercase bg-white border border-slate-200 px-2 py-1 rounded-md text-center shadow-sm">{{ task.task_id }}</span>
+                    <span class="font-semibold text-slate-700 truncate">{{ task.task_text }}</span>
+                    <div class="flex justify-start">
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm
+                        {% if task.status == 'done' %}bg-emerald-50 text-emerald-700 border border-emerald-100
+                        {% elif task.status == 'missed' or task.status == 'blk' %}bg-rose-50 text-rose-700 border border-rose-100
+                        {% elif task.status == 'wip' %}bg-slate-100 text-slate-700 border border-slate-300
+                        {% else %}bg-slate-50 text-slate-500 border border-slate-200{% endif %}">
+                        {{ task.status }}
+                      </span>
+                    </div>
+                    <span class="text-[11px] text-slate-400 font-medium text-right truncate" title="{{ task.notes }}">{{ task.notes|default:"-" }}</span>
+                  </div>
+                  {% endfor %}
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            <!-- Monthly -->
+            <div class="divide-y divide-slate-100 p-3 bg-slate-50/50">
+              {% for task in server_data.tasks %}
+              <div class="grid grid-cols-[80px_1fr_90px_120px] gap-4 items-center px-5 py-3.5 text-[13px] rounded-xl hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200 transition-all">
+                <span class="text-[10px] font-bold text-slate-400 font-mono uppercase bg-white border border-slate-200 px-2 py-1 rounded-md text-center shadow-sm">{{ task.task_id }}</span>
+                <div class="min-w-0">
+                  <span class="font-semibold text-slate-700 block truncate">{{ task.task_text }}</span>
+                  {% if task.notes %}
+                  <span class="text-[10px] text-slate-500 block mt-1 truncate bg-slate-100 border border-slate-200 px-2 py-0.5 rounded-md inline-block max-w-full shadow-sm">{{ task.notes }}</span>
+                  {% endif %}
+                </div>
+                <div class="flex justify-start">
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider shadow-sm
+                    {% if task.status == 'done' %}bg-emerald-50 text-emerald-700 border border-emerald-100
+                    {% elif task.status == 'missed' or task.status == 'blk' %}bg-rose-50 text-rose-700 border border-rose-100
+                    {% elif task.status == 'wip' %}bg-slate-100 text-slate-700 border border-slate-300
+                    {% else %}bg-slate-50 text-slate-500 border border-slate-200{% endif %}">
+                    {{ task.status }}
+                  </span>
+                </div>
+                <span class="text-[10.5px] text-slate-400 font-medium text-right font-mono">{{ task.logged_at }}</span>
+              </div>
+              {% endfor %}
+            </div>
+          {% endif %}
+        </div>
+        {% empty %}
+        <div class="bg-white border border-slate-200 rounded-2xl p-16 text-center shadow-sm flex flex-col items-center justify-center">
+          <div class="w-20 h-20 rounded-full bg-slate-50 border-2 border-slate-100 flex items-center justify-center mb-5 shadow-inner">
+            <i class="fa-solid fa-server text-slate-300 text-3xl"></i>
+          </div>
+          <h3 class="text-slate-800 text-[18px] font-bold mb-1.5">No Servers Assigned</h3>
+          <p class="text-sm text-slate-500 max-w-sm">This developer has not been assigned any infrastructure nodes to monitor.</p>
+        </div>
+        {% endfor %}
+      {% endif %}
+
+      {% else %}
+      <div class="bg-white border border-slate-200 rounded-2xl p-20 text-center shadow-sm flex flex-col items-center justify-center h-[600px] relative overflow-hidden">
+        <div class="absolute inset-0 bg-slate-50/50"></div>
+        <div class="w-24 h-24 rounded-[2rem] bg-slate-100 border-2 border-slate-200 flex items-center justify-center mb-6 shadow-inner relative z-10 rotate-3">
+          <i class="fa-solid fa-users text-emerald-500 text-4xl -rotate-3"></i>
+        </div>
+        <h3 class="display text-slate-800 text-[24px] font-bold mb-2 relative z-10">Select a Developer</h3>
+        <p class="text-sm text-slate-500 max-w-md relative z-10">Choose a team member from the roster on the left to view their detailed performance metrics and infrastructure compliance history.</p>
+      </div>
+      {% endif %}
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function toggleDay(id) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    
+    // Smooth toggle via max-height if desired, but hidden toggle is fine for now
+    if (el.classList.contains('hidden')) {
+      el.classList.remove('hidden');
+      el.style.opacity = '0';
+      setTimeout(() => {
+        el.style.transition = 'opacity 0.2s ease-in-out';
+        el.style.opacity = '1';
+      }, 10);
+    } else {
+      el.style.opacity = '0';
+      setTimeout(() => {
+        el.classList.add('hidden');
+        el.style.transition = '';
+      }, 200);
+    }
+  }
+</script>
+{% endblock %}

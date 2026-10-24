@@ -1,5 +1,5 @@
 {% extends 'tracker/base.html' %}
-{% block title %}Task Log History — DevOps R&R Tracker{% endblock %}
+{% block title %}Task Log History — Server Management{% endblock %}
 {% block header_title %}Task Log History{% endblock %}
 
 {% block extra_head %}
@@ -164,23 +164,27 @@
   }
 
   .b-done {
-    background: #dcfce7;
-    color: #166534
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #d1fae5;
   }
 
   .b-wip {
-    background: #fef9c3;
-    color: #854d0e
+    background: #f8fafc;
+    color: #475569;
+    border: 1px solid #e2e8f0;
   }
 
   .b-blk {
-    background: #fee2e2;
-    color: #991b1b
+    background: #fff1f2;
+    color: #be123c;
+    border: 1px solid #ffe4e6;
   }
 
   .b-miss {
-    background: #f1f5f9;
-    color: #64748b
+    background: #f8fafc;
+    color: #64748b;
+    border: 1px solid #e2e8f0;
   }
 
   .b-d {
@@ -273,16 +277,16 @@
     transition: opacity 0.3s;
   }
   .modal-overlay.open { display: block; opacity: 1; }
-  .mod-header { padding: 24px; border-bottom: 1px solid #f1f5f9; background: #f8fafc; }
-  .mod-body { padding: 24px; overflow-y: auto; flex: 1; }
+  .mod-header { padding: 24px 24px 20px 24px; border-bottom: 1px solid #e2e8f0; background: #fff; }
+  .mod-body { padding: 24px; overflow-y: auto; flex: 1; background: #f8fafc; }
   .mod-section { margin-bottom: 24px; }
-  .mod-sec-title { font-size: 10px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-  .mod-val-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; }
-  .mod-val-item { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e2e8f0; font-size: 11px; }
+  .mod-sec-title { font-size: 10px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .mod-val-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
+  .mod-val-item { display: flex; justify-content: space-between; padding: 8px 4px; border-bottom: 1px solid #f1f5f9; font-size: 11px; }
   .mod-val-item:last-child { border-bottom: none; }
   .mod-val-key { color: #64748b; font-weight: 600; }
   .mod-val-val { color: #0f172a; font-weight: 700; }
-  .mod-text-box { background: #fff; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 12px; font-size: 11px; color: #475569; line-height: 1.6; }
+  .mod-text-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px; font-size: 11px; color: #475569; line-height: 1.6; box-shadow: 0 1px 2px rgba(0,0,0,0.02); }
 </style>
 {% endblock %}
 
@@ -293,52 +297,59 @@
   <div class="flex items-center justify-between mb-5">
     <div>
       <h1 class="text-[18px] font-extrabold text-slate-900 tracking-tight">Task Log History</h1>
-      <p class="text-[11px] text-slate-400 mt-0.5">Filter by date, category, status and server to audit any time range
-      </p>
+      <p class="text-[11px] text-slate-400 mt-0.5">Filter by date, category, status and server to audit any time range</p>
     </div>
-    <a href="{% url 'dashboard' %}" class="reset-btn">
-      <i class="fa-solid fa-arrow-left text-[10px]"></i> Back to Dashboard
-    </a>
+    <div class="flex items-center gap-3">
+      <!-- Quick Filters -->
+      <div class="hidden md:flex items-center gap-2 bg-slate-50 p-1 rounded-lg border border-slate-200">
+        <button onclick="setQuickDate(0)" class="px-3 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-600 hover:bg-white hover:text-emerald-600 hover:shadow-sm">Today</button>
+        <button onclick="setQuickDate(1)" class="px-3 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-600 hover:bg-white hover:text-emerald-600 hover:shadow-sm">Yesterday</button>
+        <button onclick="setQuickDate(7)" class="px-3 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-600 hover:bg-white hover:text-emerald-600 hover:shadow-sm">Last 7 Days</button>
+        <button onclick="setThisMonth()" class="px-3 py-1.5 text-[10px] font-bold rounded-md transition-all text-slate-600 hover:bg-white hover:text-emerald-600 hover:shadow-sm">This Month</button>
+      </div>
+      <a href="{% url 'dashboard' %}" class="reset-btn">
+        <i class="fa-solid fa-arrow-left text-[10px]"></i> Dashboard
+      </a>
+    </div>
+  </div>
+
+  <!-- CATEGORY TABS -->
+  <div class="flex border-b border-slate-200 mb-6">
+    <button onclick="setCategory('')" class="px-6 py-3 text-[12px] font-bold border-b-2 transition-colors {% if not f_category %}border-emerald-500 text-emerald-600{% else %}border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300{% endif %}">All Categories</button>
+    <button onclick="setCategory('d')" class="px-6 py-3 text-[12px] font-bold border-b-2 transition-colors {% if f_category == 'd' %}border-emerald-500 text-emerald-600{% else %}border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300{% endif %}">Daily Tasks</button>
+    <button onclick="setCategory('w')" class="px-6 py-3 text-[12px] font-bold border-b-2 transition-colors {% if f_category == 'w' %}border-emerald-500 text-emerald-600{% else %}border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300{% endif %}">Weekly Tasks</button>
+    <button onclick="setCategory('m')" class="px-6 py-3 text-[12px] font-bold border-b-2 transition-colors {% if f_category == 'm' %}border-emerald-500 text-emerald-600{% else %}border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300{% endif %}">Monthly Tasks</button>
   </div>
 
   <!-- FILTER PANEL -->
-  <div class="fbar">
+  <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm mb-6">
     <form method="get" id="filterForm">
-      <div
-        class="grid grid-cols-2 md:grid-cols-3 {% if viewer_role in 'manager tl' %}lg:grid-cols-7{% else %}lg:grid-cols-6{% endif %} gap-4 items-end">
+      <input type="hidden" name="category" value="{{ f_category }}">
+      <div class="grid grid-cols-2 md:grid-cols-3 {% if viewer_role in 'manager tl' %}lg:grid-cols-6{% else %}lg:grid-cols-5{% endif %} gap-4 items-end">
+        {% if f_category == 'w' %}
+        <div>
+          <label class="flabel">Select Week</label>
+          <input type="week" name="week_val" value="{{ f_week }}" class="finput bg-slate-50 border-slate-200 text-slate-700" onchange="this.form.submit()">
+        </div>
+        {% elif f_category == 'm' %}
+        <div>
+          <label class="flabel">Select Month</label>
+          <input type="month" name="month_val" value="{{ f_month }}" class="finput bg-slate-50 border-slate-200 text-slate-700" onchange="this.form.submit()">
+        </div>
+        {% else %}
         <div>
           <label class="flabel">From Date</label>
-          <input type="date" name="date_from" value="{{ f_date_from }}" class="finput" onchange="this.form.submit()">
+          <input type="date" name="date_from" value="{{ f_date_from }}" class="finput bg-slate-50 border-slate-200 text-slate-700" onchange="this.form.submit()">
         </div>
         <div>
           <label class="flabel">To Date</label>
-          <input type="date" name="date_to" value="{{ f_date_to }}" class="finput" onchange="this.form.submit()">
-        </div>
-        {% if viewer_role in 'manager tl' %}
-        <div>
-          <label class="flabel">Developer</label>
-          <select name="developer_id" class="fselect" onchange="this.form.submit()">
-            <option value="">All Developers</option>
-            {% for dev in developers %}
-            <option value="{{ dev.id }}" {% if f_developer_id == dev.id|stringformat:'s' %}selected{% endif %}>
-              {{ dev.get_full_name|default:dev.username }}
-            </option>
-            {% endfor %}
-          </select>
+          <input type="date" name="date_to" value="{{ f_date_to }}" class="finput bg-slate-50 border-slate-200 text-slate-700" onchange="this.form.submit()">
         </div>
         {% endif %}
-        <div>
-          <label class="flabel">Category</label>
-          <select name="category" class="fselect" onchange="this.form.submit()">
-            <option value="">All Categories</option>
-            <option value="d" {% if f_category == 'd' %}selected{% endif %}>Daily</option>
-            <option value="w" {% if f_category == 'w' %}selected{% endif %}>Weekly</option>
-            <option value="m" {% if f_category == 'm' %}selected{% endif %}>Monthly</option>
-          </select>
-        </div>
+
         <div>
           <label class="flabel">Status</label>
-          <select name="status" class="fselect" onchange="this.form.submit()">
+          <select name="status" class="fselect custom-select-trigger" data-btn-class="bg-slate-50 border-slate-200 text-slate-700" onchange="this.form.submit()">
             <option value="">All Statuses</option>
             <option value="done" {% if f_status == 'done' %}selected{% endif %}>Done</option>
             <option value="wip"  {% if f_status == 'wip'  %}selected{% endif %}>In Progress</option>
@@ -348,7 +359,7 @@
         </div>
         <div>
           <label class="flabel">Server</label>
-          <select name="server_id" class="fselect" onchange="this.form.submit()">
+          <select name="server_id" class="fselect custom-select-trigger" data-btn-class="bg-slate-50 border-slate-200 text-slate-700" onchange="this.form.submit()">
             <option value="">All Servers</option>
             {% for s in servers %}
             <option value="{{ s.id }}" {% if f_server_id == s.id|stringformat:'s' %}selected{% endif %}>{{ s.name }}</option>
@@ -357,7 +368,7 @@
         </div>
         <div>
           <label class="flabel">&nbsp;</label>
-          <a href="{% url 'task_log_filter' %}" class="reset-btn w-full justify-center">
+          <a href="{% url 'task_log_filter' %}" class="w-full flex items-center justify-center gap-2 py-1.5 text-[11px] font-bold text-slate-500 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors h-[31px]">
             <i class="fa-solid fa-rotate-left"></i> Reset
           </a>
         </div>
@@ -365,99 +376,136 @@
     </form>
   </div>
 
-  <!-- KPI SUMMARY -->
-  <div class="kpi-row">
-    <div class="kpi-tile">
-      <div class="kpi-val text-slate-800">{{ total }}</div>
-      <div class="kpi-lbl"><span class="kpi-dot bg-slate-400"></span>Total Logs</div>
+  <!-- KPI SUMMARY (Slate & Emerald Styled) -->
+  <div class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-6">
+    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+      <div class="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 flex-shrink-0 border border-slate-100">
+        <i class="fa-solid fa-list-ul text-lg"></i>
+      </div>
+      <div>
+        <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Total Logs</div>
+        <div class="text-xl font-bold text-slate-900 leading-none">{{ total }}</div>
+      </div>
     </div>
-    <div class="kpi-tile" style="border-color:#d1fae5;background:#f0fdf4">
-      <div class="kpi-val text-emerald-700">{{ done }}</div>
-      <div class="kpi-lbl"><span class="kpi-dot bg-emerald-500"></span>Done</div>
+    <div class="bg-white p-4 rounded-xl border border-emerald-100 shadow-sm flex items-center gap-4">
+      <div class="w-10 h-10 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 flex-shrink-0 border border-emerald-100">
+        <i class="fa-solid fa-check text-lg"></i>
+      </div>
+      <div>
+        <div class="text-[9px] font-bold text-emerald-600/70 uppercase tracking-widest mb-0.5">Done</div>
+        <div class="text-xl font-bold text-emerald-700 leading-none">{{ done }}</div>
+      </div>
     </div>
-    <div class="kpi-tile" style="border-color:#fde68a;background:#fffbeb">
-      <div class="kpi-val text-amber-700">{{ pending }}</div>
-      <div class="kpi-lbl"><span class="kpi-dot bg-amber-400"></span>In Progress</div>
+    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+      <div class="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 flex-shrink-0 border border-slate-100">
+        <i class="fa-solid fa-spinner text-lg"></i>
+      </div>
+      <div>
+        <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">In Progress</div>
+        <div class="text-xl font-bold text-slate-700 leading-none">{{ pending }}</div>
+      </div>
     </div>
-    <div class="kpi-tile" style="border-color:#fecaca;background:#fff1f2">
-      <div class="kpi-val text-rose-700">{{ blocked }}</div>
-      <div class="kpi-lbl"><span class="kpi-dot bg-rose-500"></span>Blocked</div>
+    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+      <div class="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-600 flex-shrink-0 border border-slate-100">
+        <i class="fa-solid fa-ban text-lg"></i>
+      </div>
+      <div>
+        <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Blocked</div>
+        <div class="text-xl font-bold text-slate-700 leading-none">{{ blocked }}</div>
+      </div>
     </div>
-    <div class="kpi-tile">
-      {% with missed=total|add:"-0" %}
-      <div class="kpi-val text-slate-500">{{ total|add:"-"|add:done }}</div>
-      {% endwith %}
-      <div class="kpi-lbl"><span class="kpi-dot bg-slate-300"></span>Pending / Missed</div>
+    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex items-center gap-4">
+      <div class="w-10 h-10 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 flex-shrink-0 border border-slate-100">
+        <i class="fa-solid fa-circle-question text-lg"></i>
+      </div>
+      <div>
+        {% with missed=total|add:"-0" %}
+        <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Pending / Missed</div>
+        <div class="text-xl font-bold text-slate-500 leading-none">{{ total|add:"-"|add:done }}</div>
+        {% endwith %}
+      </div>
     </div>
   </div>
 
-  <!-- LOG TABLE -->
-  <div class="log-wrap">
-    <div class="log-thead-bar">
-      <div class="font-bold text-slate-800 text-[13px]">
+  <!-- LOG TABLE (Wrapped, Clean layout) -->
+  <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden mb-8">
+    <div class="px-5 py-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
+      <div class="font-bold text-slate-800 text-[13px] flex items-center gap-2">
         Log Entries
-        <span class="ml-2 text-[11px] text-slate-400 font-normal">(showing up to 500 records)</span>
+        <span class="text-[11px] text-slate-400 font-normal bg-slate-100 px-2 py-0.5 rounded">up to 500 records</span>
       </div>
       {% if f_date_from or f_date_to or f_category or f_status or f_server_id or f_developer_id %}
-      <span class="filter-pill"><i class="fa-solid fa-filter text-[9px] mr-1"></i>Filtered</span>
+      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-50 border border-emerald-100 text-[9px] font-bold text-emerald-700 uppercase tracking-widest"><i class="fa-solid fa-filter"></i> Filtered</span>
       {% endif %}
     </div>
 
-    <div style="overflow-x:auto;max-height:560px;overflow-y:auto">
-      <table class="log-table">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse min-w-[900px]">
         <thead>
-          <tr>
-            <th style="width:90px">Date</th>
-            <th style="width:55px">Time</th>
-            {% if viewer_role in 'manager tl' %}<th style="width:140px">Developer</th>{% endif %}
-            <th style="width:120px">Server</th>
-            <th style="width:70px">Category</th>
-            <th style="width:65px">Task ID</th>
-            <th>Task Description</th>
-            <th style="width:80px">Status</th>
-            <th style="width:180px">Notes</th>
+          <tr class="bg-slate-50 border-b border-slate-200">
+            <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">Date / Time</th>
+            <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Node & Category</th>
+            <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest w-1/3">Task Details</th>
+            <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</th>
+            <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest w-1/4">Notes</th>
+            <th class="px-5 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest text-right">Action</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody class="divide-y divide-slate-100">
           {% for log in logs %}
-          <tr onclick="viewLogDetails({{ log.id }})" class="cursor-pointer group">
-            <td class="font-semibold text-slate-700 text-[11px] whitespace-nowrap">{{ log.logged_at|date:"d M Y" }}</td>
-            <td class="text-slate-400 font-mono text-[10px]">{{ log.logged_at|date:"H:i" }}</td>
-            {% if viewer_role in 'manager tl' %}
-            <td>
-              <div class="flex items-center gap-2">
-                <div class="av">{{ log.developer.developer.initials|default:log.developer.username|slice:":2"|upper }}
-                </div>
-                <span class="text-slate-700 font-medium text-[11px] truncate max-w-[90px]"
-                  title="{{ log.developer.get_full_name|default:log.developer.username }}">
-                  {{ log.developer.get_full_name|default:log.developer.username }}
+          <tr onclick="viewLogDetails({{ log.id }})" class="hover:bg-slate-50/70 transition-colors cursor-pointer group border-b border-slate-50">
+            <td class="px-5 py-2.5 align-top">
+              <div class="font-bold text-[12px] text-slate-800">{{ log.logged_at|date:"d M Y" }}</div>
+              <div class="text-[10px] text-slate-400 font-mono mt-0.5">{{ log.logged_at|date:"H:i" }}</div>
+            </td>
+            
+            <td class="px-5 py-2.5 align-top">
+              <div class="mb-1.5">
+                {% if log.server %}
+                <a href="{% url 'server_details' log.server.id %}" class="inline-flex items-center gap-1.5 text-[11.5px] font-bold text-emerald-600 hover:text-emerald-700 hover:underline">
+                  <i class="fa-solid fa-server text-[11px]"></i> {{ log.server.name }}
+                </a>
+                {% else %}
+                <span class="text-slate-400 text-[11px]"><i class="fa-solid fa-server text-[11px]"></i> —</span>
+                {% endif %}
+              </div>
+              <div>
+                <span class="badge {% if log.category == 'd' %}bg-slate-50 text-slate-500 border border-slate-200{% elif log.category == 'w' %}bg-emerald-50 text-emerald-700 border border-emerald-100{% else %}bg-slate-50 text-slate-500 border border-slate-200{% endif %} px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-widest mt-1 inline-block">
+                  {% if log.category == 'd' %}Daily{% elif log.category == 'w' %}Weekly{% else %}Monthly{% endif %}
                 </span>
               </div>
             </td>
-            {% endif %}
-            <td>
-              {% if log.server %}
-              <a href="{% url 'server_details' log.server.id %}"
-                class="text-blue-600 hover:text-blue-800 hover:underline font-semibold text-[11px]">{{ log.server.name }}</a>
-              {% else %}<span class="text-slate-300 text-[11px]">—</span>{% endif %}
+            
+            <td class="px-5 py-2.5 align-top max-w-[250px]">
+              <div class="font-mono text-[10px] text-slate-400 font-bold mb-1">{{ log.task_id }}</div>
+              <div class="text-[11.5px] text-slate-700 font-medium leading-relaxed whitespace-normal">{{ log.task_text }}</div>
             </td>
-            <td>
-              <span
-              <span class="badge {% if log.category == 'd' %}b-d{% elif log.category == 'w' %}b-w{% else %}b-m{% endif %}">{% if log.category == 'd' %}Daily{% elif log.category == 'w' %}Weekly{% else %}Monthly{% endif %}</span>
+            
+            <td class="px-5 py-2.5 align-top">
+              <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded text-[9px] font-bold uppercase tracking-widest {% if log.status == 'done' %}bg-emerald-50 text-emerald-700 border border-emerald-100{% elif log.status == 'wip' %}bg-slate-100 text-slate-600 border border-slate-200{% elif log.status == 'blk' %}bg-rose-50 text-rose-700 border border-rose-100{% else %}bg-slate-100 text-slate-500 border border-slate-200{% endif %} mt-0.5">
+                {% if log.status == 'done' %}<i class="fa-solid fa-check"></i>{% elif log.status == 'wip' %}<i class="fa-solid fa-spinner"></i>{% elif log.status == 'blk' %}<i class="fa-solid fa-ban"></i>{% else %}<i class="fa-solid fa-minus"></i>{% endif %}
+                {{ log.get_status_display }}
+              </span>
             </td>
-            <td class="font-mono text-[10px] text-slate-500 font-bold">{{ log.task_id }}</td>
-            <td class="text-slate-700 font-medium text-[11px] max-w-xs" title="{{ log.task_text }}">{{ log.task_text|truncatechars:65 }}</td>
-            <td>
-              <span class="badge {% if log.status == 'done' %}b-done{% elif log.status == 'wip' %}b-wip{% elif log.status == 'blk' %}b-blk{% else %}b-miss{% endif %}">{{ log.get_status_display }}</span>
+            
+            <td class="px-5 py-2.5 align-top max-w-[200px]">
+              <div class="text-[11px] text-slate-600 whitespace-normal line-clamp-3 mt-1">{{ log.notes|default:"—" }}</div>
             </td>
-            <td class="text-slate-400 text-[10px] max-w-[160px] truncate" title="{{ log.notes }}">{{ log.notes|default:"—"|truncatechars:45 }}</td>
+            
+            <td class="px-5 py-2.5 align-top text-right">
+              <button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[10px] font-bold text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all mt-0.5">
+                View <i class="fa-solid fa-chevron-right text-[8px]"></i>
+              </button>
+            </td>
           </tr>
           {% empty %}
           <tr>
-            <td colspan="9" class="text-center py-16">
-              <i class="fa-solid fa-magnifying-glass text-4xl text-slate-200 mb-4 block"></i>
-              <p class="text-[13px] font-semibold text-slate-400">No logs match your current filters.</p>
-              <p class="text-[11px] text-slate-300 mt-1">Try adjusting the date range, category, or server.</p>
+            <td colspan="6" class="px-5 py-16 text-center">
+              <div class="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center mx-auto mb-4 text-slate-300">
+                <i class="fa-solid fa-magnifying-glass text-2xl"></i>
+              </div>
+              <h3 class="text-[14px] font-bold text-slate-700 mb-1">No logs found</h3>
+              <p class="text-[12px] text-slate-500">Try adjusting your filters or date range.</p>
             </td>
           </tr>
           {% endfor %}
@@ -476,17 +524,15 @@
       <span id="mod-cat" class="badge">Category</span>
       <button onclick="closeLogModal()" class="text-slate-400 hover:text-slate-600 transition-colors"><i class="fa-solid fa-xmark text-lg"></i></button>
     </div>
-    <div class="text-[10px] font-bold text-blue-500 mb-1" id="mod-id">TASK-ID</div>
-    <h3 class="text-lg font-extrabold text-slate-900 leading-tight" id="mod-title">Task Title</h3>
-    <div class="flex items-center gap-2 mt-3 text-[11px] text-slate-400">
-      <i class="fa-solid fa-user-circle"></i> <span id="mod-dev">Developer</span>
-      <span class="text-slate-200">|</span>
+    <div class="font-mono text-[11px] font-bold text-slate-500 mb-1" id="mod-id">TASK-ID</div>
+    <h3 class="text-[17px] font-extrabold text-slate-900 leading-tight" id="mod-title">Task Title</h3>
+    <div class="flex items-center gap-2 mt-3 text-[11px] font-medium text-slate-400">
       <i class="fa-regular fa-clock"></i> <span id="mod-time">Date/Time</span>
     </div>
   </div>
   <div class="mod-body">
     <div class="mod-section">
-      <div class="mod-sec-title"><i class="fa-solid fa-server text-blue-500"></i> Server Information</div>
+      <div class="mod-sec-title"><i class="fa-solid fa-server text-emerald-600"></i> Server Information</div>
       <div class="mod-val-card">
         <div class="mod-val-item"><span class="mod-val-key">Server Name</span><span class="mod-val-val" id="mod-srv">N/A</span></div>
         <div class="mod-val-item"><span class="mod-val-key">Current Status</span><span class="mod-val-val" id="mod-status">Done</span></div>
@@ -494,19 +540,19 @@
     </div>
 
     <div class="mod-section" id="mod-fields-section">
-      <div class="mod-sec-title"><i class="fa-solid fa-table-list text-emerald-500"></i> Field Telemetry</div>
+      <div class="mod-sec-title"><i class="fa-solid fa-table-list text-slate-400"></i> Field Telemetry</div>
       <div class="mod-val-card" id="mod-fields-container">
         <!-- Dynamic fields here -->
       </div>
     </div>
 
     <div class="mod-section" id="mod-notes-section">
-      <div class="mod-sec-title"><i class="fa-solid fa-comment-dots text-amber-500"></i> Technical Observations</div>
+      <div class="mod-sec-title"><i class="fa-solid fa-comment-dots text-slate-400"></i> Technical Observations</div>
       <div class="mod-text-box" id="mod-remarks">No observations provided.</div>
     </div>
 
     <div class="mod-section">
-      <div class="mod-sec-title"><i class="fa-solid fa-clipboard-list text-indigo-500"></i> Observations & Actions</div>
+      <div class="mod-sec-title"><i class="fa-solid fa-clipboard-check text-slate-400"></i> Observations & Actions</div>
       <div class="space-y-3">
         <div>
           <div class="text-[9px] font-bold text-slate-400 uppercase mb-1">Observations</div>
@@ -522,6 +568,33 @@
 </div>
 
 <script>
+  function setCategory(cat) {
+    // If using custom-select, the actual select is hidden but we can set its value and submit
+    const catSelect = document.querySelector('[name="category"]');
+    if (catSelect) {
+      catSelect.value = cat;
+      document.getElementById('filterForm').submit();
+    }
+  }
+
+  function setQuickDate(days) {
+    const to = new Date();
+    const from = new Date();
+    from.setDate(to.getDate() - days);
+    document.querySelector('[name="date_to"]').value = to.toISOString().split('T')[0];
+    document.querySelector('[name="date_from"]').value = from.toISOString().split('T')[0];
+    document.getElementById('filterForm').submit();
+  }
+
+  function setThisMonth() {
+    const date = new Date();
+    const firstDay = new Date(date.getFullYear(), date.getMonth(), 1);
+    const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0);
+    document.querySelector('[name="date_from"]').value = firstDay.toISOString().split('T')[0];
+    document.querySelector('[name="date_to"]').value = lastDay.toISOString().split('T')[0];
+    document.getElementById('filterForm').submit();
+  }
+
   function closeLogModal() {
     document.getElementById('logDetailModal').classList.remove('open');
     document.getElementById('modalOverlay').classList.remove('open');
@@ -534,7 +607,7 @@
       document.getElementById('modalOverlay').classList.add('open');
       document.body.style.overflow = 'hidden';
 
-      const response = await fetch(`/api/log-details/${logId}/`);
+      const response = await fetch(`/server_management/api/log-details/${logId}/`);
       if (!response.ok) throw new Error('Failed to fetch');
       
       const data = await response.json();
@@ -544,7 +617,7 @@
       document.getElementById('mod-cat').className = `badge ${getStatusClass(data.status)}`;
       document.getElementById('mod-id').textContent = data.task_id;
       document.getElementById('mod-title').textContent = data.task_text;
-      document.getElementById('mod-dev').textContent = data.developer;
+
       document.getElementById('mod-time').textContent = data.logged_at;
       document.getElementById('mod-srv').textContent = data.server;
       document.getElementById('mod-status').textContent = data.status;

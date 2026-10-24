@@ -11,12 +11,39 @@ class Server(models.Model):
     ]
     name = models.CharField(max_length=100)
     ip_address = models.GenericIPAddressField(blank=True, null=True)
+    port_number = models.IntegerField(default=22)
+    username = models.CharField(max_length=100, blank=True, null=True)
+    server_password = models.CharField(max_length=200, blank=True, null=True)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='up')
     owner = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='owned_servers')
+    assigned_users = models.ManyToManyField(User, related_name='assigned_servers', blank=True)
     last_checked = models.DateTimeField(auto_now=True)
+
+    # Static Details
+    os_version = models.CharField(max_length=100, blank=True, null=True)
+    cpu_cores = models.IntegerField(blank=True, null=True)
+    total_ram = models.CharField(max_length=50, blank=True, null=True)
+    total_disk = models.CharField(max_length=50, blank=True, null=True)
 
     def __str__(self):
         return self.name
+
+class ServerStatusHistory(models.Model):
+    STATUS_CHOICES = [
+        ('up', 'Operational'),
+        ('down', 'Down'),
+        ('maint', 'Maintenance'),
+    ]
+    server = models.ForeignKey(Server, on_delete=models.CASCADE, related_name='status_history')
+    changed_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES)
+    timestamp = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        ordering = ['-timestamp']
+
+    def __str__(self):
+        return f"{self.server.name} -> {self.status} at {self.timestamp}"
 
 class Developer(models.Model):
     ROLE_CHOICES = [
@@ -26,9 +53,12 @@ class Developer(models.Model):
     ]
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='developer')
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='developer')
-    job_title = models.CharField(max_length=100, default='DevOps Engineer', blank=True)
+    job_title = models.CharField(max_length=100, default='Engineer', blank=True)
     avatar_gradient = models.CharField(max_length=200, default='linear-gradient(135deg,#2563eb,#06b6d4)')
     initials = models.CharField(max_length=4, blank=True)
+    can_reset_passwords = models.BooleanField(default=False)
+    important_tasks = models.ManyToManyField('TaskDefinition', related_name='favorited_by', blank=True)
+    important_servers = models.ManyToManyField('Server', related_name='favorited_by_devs', blank=True)
 
     def save(self, *args, **kwargs):
         if not self.initials:
@@ -74,13 +104,15 @@ class TaskDefinition(models.Model):
     priority = models.CharField(max_length=10, choices=PRIORITY_CHOICES, default='med')
     fields_schema = models.JSONField(default=list, blank=True, help_text='List of field names for this task')
     is_active = models.BooleanField(default=True)
+    apply_to_all = models.BooleanField(default=True, help_text='If true, applies to all servers')
+    servers = models.ManyToManyField(Server, related_name='assigned_tasks', blank=True)
 
     def __str__(self):
         return f"[{self.get_category_display()}] {self.task_id} - {self.text[:50]}"
 
 
 class TaskLog(models.Model):
-    """Base task log - tracks which R&R task was done"""
+    """Base task log - tracks which task was done"""
     STATUS_CHOICES = [
         ('done', 'Done'),
         ('wip', 'In Progress'),
@@ -132,6 +164,14 @@ class ServerHealthEntry(models.Model):
     action_taken = models.TextField(blank=True)
     remarks = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    
+    # New Dynamic Details
+    network_rx_tx = models.CharField(max_length=100, blank=True, null=True)
+    load_average = models.CharField(max_length=50, blank=True, null=True)
+    uptime = models.CharField(max_length=100, blank=True, null=True)
+    swap_usage = models.CharField(max_length=50, blank=True, null=True)
+    docker_running = models.IntegerField(blank=True, null=True)
+    docker_failed = models.IntegerField(blank=True, null=True)
 
     class Meta:
         ordering = ['-date', '-created_at']

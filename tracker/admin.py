@@ -7,8 +7,19 @@ class DeveloperAdmin(admin.ModelAdmin):
     list_filter = ['role']
     search_fields = ['user__username', 'user__first_name', 'user__last_name']
 
+from django import forms
+
+class ServerAdminForm(forms.ModelForm):
+    class Meta:
+        model = Server
+        fields = '__all__'
+        widgets = {
+            'server_password': forms.PasswordInput(render_value=True),
+        }
+
 @admin.register(Server)
 class ServerAdmin(admin.ModelAdmin):
+    form = ServerAdminForm
     list_display = ['name', 'ip_address', 'status', 'owner', 'last_checked']
     list_filter = ['status']
 

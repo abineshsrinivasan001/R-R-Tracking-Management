@@ -1,4 +1,4 @@
-# 🚀 OpsTrack — DevOps R&R Tracker (Django + Tailwind + PostgreSQL)
+# 🚀 Server & DB Management (Django + Tailwind + PostgreSQL)
 
 A professional Django-based DevOps Roles & Responsibilities Tracker with PostgreSQL backend, Tailwind CSS UI, and detailed task entry forms for developers.
 
@@ -111,7 +111,7 @@ Visit: http://127.0.0.1:8000
 ## 📊 Database Models
 
 ### `TaskLog`
-Tracks which R&R tasks are marked done/wip/blocked per developer per day.
+Tracks which tasks are marked done/wip/blocked per developer per day.
 
 ### `ServerHealthEntry`
 - Date, Server Name

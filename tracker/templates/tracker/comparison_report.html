@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{{ title }} - {{ server.name }}</title>
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #334155;
+            margin: 0;
+            padding: 40px;
+            background: white;
+            font-size: 14px;
+        }
+
+        .header {
+            border-bottom: 2px solid #10b981;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 800;
+            color: #0f172a;
+            margin: 0 0 5px 0;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: #64748b;
+            margin: 0;
+        }
+
+        .meta {
+            margin-top: 20px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+        }
+
+        .meta-item {
+            color: #475569;
+        }
+
+        .meta-item strong {
+            color: #0f172a;
+        }
+
+        .task-card {
+            margin-bottom: 40px;
+            page-break-inside: avoid;
+        }
+
+        .task-header {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            padding: 12px 16px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .task-id {
+            background: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 800;
+            color: #475569;
+        }
+
+        .task-name {
+            font-weight: 700;
+            color: #0f172a;
+            font-size: 15px;
+        }
+
+        .task-dates {
+            margin-left: auto;
+            font-size: 12px;
+            color: #64748b;
+            font-weight: 500;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #e2e8f0;
+            border-top: none;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 10px 16px;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        th {
+            background: #f8fafc;
+            font-size: 11px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #64748b;
+            letter-spacing: 0.05em;
+        }
+
+        td {
+            font-size: 13px;
+        }
+
+        .td-metric {
+            font-weight: 600;
+            color: #334155;
+            width: 30%;
+        }
+
+        .td-prev {
+            color: #64748b;
+            font-style: italic;
+            width: 25%;
+        }
+
+        .td-curr {
+            font-weight: 700;
+            color: #0f172a;
+            width: 25%;
+        }
+
+        .td-change {
+            width: 20%;
+        }
+
+        .chg-same {
+            color: #94a3b8;
+            font-weight: 600;
+        }
+
+        .chg-diff {
+            color: #8b5cf6;
+            font-weight: 600;
+        }
+
+        .chg-up {
+            color: #10b981;
+            font-weight: 600;
+        }
+
+        .chg-down {
+            color: #ef4444;
+            font-weight: 600;
+        }
+
+        .footer {
+            margin-top: 50px;
+            text-align: center;
+            font-size: 12px;
+            color: #94a3b8;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 20px;
+        }
+
+        .no-data {
+            padding: 20px;
+            text-align: center;
+            color: #64748b;
+            font-style: italic;
+            border: 1px solid #e2e8f0;
+            border-top: none;
+        }
+
+        @media print {
+            body {
+                padding: 0;
+            }
+
+            .task-card {
+                margin-bottom: 30px;
+            }
+        }
+    </style>
+</head>
+
+<body onload="window.print()">
+
+    <div class="header">
+        <h1 class="title">{{ title }}</h1>
+        <p class="subtitle">Server: <strong>{{ server.name }}</strong> ({{ server.ip_address }})</p>
+
+        <div class="meta">
+            <div class="meta-item">
+                Comparison Period:
+                <strong>
+                    {% if start_str and end_str %}
+                    {{ start_str }} vs {{ end_str }}
+                    {% elif end_str %}
+                    Ending {{ end_str }}
+                    {% else %}
+                    All Time
+                    {% endif %}
+                </strong>
+            </div>
+            <div class="meta-item">
+                Generated: <strong>{{ date_generated|date:"d M Y, H:i" }}</strong>
+            </div>
+        </div>
+    </div>
+
+    {% if not comps %}
+    <div style="text-align: center; padding: 50px; color: #64748b;">
+        <h2>No Data Found</h2>
+        <p>No comparisons match the specified date range for this category.</p>
+    </div>
+    {% endif %}
+
+    {% for tc in comps %}
+    <div class="task-card">
+        <div class="task-header">
+            <span class="task-id">{{ tc.task_id }}</span>
+            <span class="task-name">{{ tc.task_text }}</span>
+            <span class="task-dates">
+                {{ tc.current_date|date:"d M Y" }}
+                {% if tc.previous_date %} vs {{ tc.previous_date|date:"d M Y" }}{% endif %}
+            </span>
+        </div>
+        {% if tc.fields %}
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Previous</th>
+                    <th>Current</th>
+                    <th>Change</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for f in tc.fields %}
+                <tr>
+                    <td class="td-metric">{{ f.key }}</td>
+                    <td class="td-prev">{{ f.previous|default:"—" }}</td>
+                    <td class="td-curr">{{ f.current|default:"—" }}</td>
+                    <td class="td-change">
+                        {% if f.change == 'up' %}<span class="chg-up">↑ Higher</span>
+                        {% elif f.change == 'down' %}<span class="chg-down">↓ Lower</span>
+                        {% elif f.change == 'changed' %}<span class="chg-diff">🔀 Changed</span>
+                        {% else %}<span class="chg-same">= Same</span>{% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="no-data">No field data recorded for this task.</div>
+        {% endif %}
+    </div>
+    {% endfor %}
+
+    <div class="footer">
+        Generated by Server Management
+    </div>
+
+</body>
+
+</html>

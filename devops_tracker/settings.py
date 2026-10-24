@@ -1,5 +1,5 @@
 """
-Django settings for DevOps R&R Tracker
+# Django settings for Server & DB Management
 """
 from pathlib import Path
 import os
@@ -71,17 +71,22 @@ AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator'},
 ]
 
+AUTHENTICATION_BACKENDS = [
+    'tracker.backends.EmailBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
+
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Asia/Kolkata'
 USE_I18N = True
-USE_TZ = True
+USE_TZ = False
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/'
-LOGOUT_REDIRECT_URL = '/login/'
+LOGIN_URL = '/server_management/login/'
+LOGIN_REDIRECT_URL = '/server_management/'
+LOGOUT_REDIRECT_URL = '/server_management/login/'
 SESSION_COOKIE_AGE = 86400  # 1 Day in seconds

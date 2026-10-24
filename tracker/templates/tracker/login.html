@@ -4,9 +4,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sign In — DevOps R&R Tracker</title>
+  <title>Sign In — Server and DB Management</title>
   <meta name="description"
-    content="Sign in to the Enterprise DevOps Roles & Responsibilities Tracker to manage your infrastructure tasks." />
+    content="Sign in to the Enterprise Server and DB Management platform to manage your infrastructure tasks." />
 
   <!-- Fonts -->
   <link
@@ -25,13 +25,13 @@
     }
 
     :root {
-      --navy: #0d1b2e;
-      --navy-800: #132338;
-      --navy-700: #1a3a70;
-      --blue: #3b82f6;
-      --blue-dark: #2563eb;
-      --violet: #7c3aed;
-      --cyan: #06b6d4;
+      --navy: #0f172a;
+      --navy-800: #1e293b;
+      --navy-700: #334155;
+      --blue: #10b981;
+      --blue-dark: #059669;
+      --violet: #14b8a6;
+      --cyan: #0d9488;
       --slate-50: #f8fafc;
       --slate-100: #f1f5f9;
       --slate-200: #e2e8f0;
@@ -89,7 +89,7 @@
       left: -80px;
       width: 260px;
       height: 260px;
-      background: radial-gradient(circle, rgba(59, 130, 246, .12) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(16, 185, 129, .12) 0%, transparent 70%);
       pointer-events: none;
     }
 
@@ -100,7 +100,7 @@
       right: -60px;
       width: 200px;
       height: 200px;
-      background: radial-gradient(circle, rgba(124, 58, 237, .10) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(20, 184, 166, .10) 0%, transparent 70%);
       pointer-events: none;
     }
 
@@ -240,7 +240,7 @@
     .form-input:focus {
       background: #fff;
       border-color: var(--blue);
-      box-shadow: 0 0 0 4px rgba(59, 130, 246, .10);
+      box-shadow: 0 0 0 4px rgba(16, 185, 129, .10);
     }
 
     /* password toggle */
@@ -380,6 +380,7 @@
       filter: blur(90px);
       opacity: .25;
       pointer-events: none;
+      display: none;
     }
 
     .blob-1 {
@@ -408,15 +409,16 @@
       opacity: .12;
     }
 
-    /* Grid pattern overlay */
+    /* Circuit background */
     .grid-overlay {
       position: absolute;
       inset: 0;
-      background-image:
-        linear-gradient(rgba(255, 255, 255, .03) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(255, 255, 255, .03) 1px, transparent 1px);
-      background-size: 40px 40px;
+      background-image: url("{% static 'tracker/circuit_bg.png' %}");
+      background-size: cover;
+      background-position: center;
+      opacity: 0.15;
       pointer-events: none;
+      mix-blend-mode: screen;
     }
 
     /* Right content */
@@ -432,26 +434,18 @@
 
     /* Logo */
     .logo-container {
-      width: 200px;
-      height: 200px;
+      width: 280px;
+      height: 280px;
       position: relative;
       margin-bottom: 10px;
     }
 
     .logo-ring {
-      position: absolute;
-      inset: -12px;
-      border-radius: 50%;
-      border: 1.5px solid rgba(59, 130, 246, .25);
-      animation: spinRing 18s linear infinite;
+      display: none;
     }
 
     .logo-ring-2 {
-      position: absolute;
-      inset: -28px;
-      border-radius: 50%;
-      border: 1px dashed rgba(124, 58, 237, .18);
-      animation: spinRing 30s linear infinite reverse;
+      display: none;
     }
 
     @keyframes spinRing {
@@ -461,11 +455,7 @@
     }
 
     .logo-glow {
-      position: absolute;
-      inset: 0;
-      border-radius: 50%;
-      background: radial-gradient(circle, rgba(59, 130, 246, .15) 0%, transparent 70%);
-      animation: pulse 3s ease-in-out infinite;
+      display: none;
     }
 
     @keyframes pulse {
@@ -488,8 +478,7 @@
       object-fit: contain;
       position: relative;
       z-index: 1;
-      border-radius: 50%;
-      filter: drop-shadow(0 0 24px rgba(59, 130, 246, .4));
+      filter: drop-shadow(0 0 15px rgba(16, 185, 129, .15));
     }
 
     /* Fallback icon logo (if image fails) */
@@ -503,7 +492,7 @@
       justify-content: center;
       font-size: 72px;
       color: #fff;
-      box-shadow: 0 0 48px rgba(59, 130, 246, .4);
+      box-shadow: 0 0 48px rgba(16, 185, 129, .4);
     }
 
     .brand-title {
@@ -592,13 +581,13 @@
     }
 
     .fi-blue {
-      background: rgba(59, 130, 246, .18);
-      color: #60a5fa;
+      background: rgba(16, 185, 129, .18);
+      color: #34d399;
     }
 
     .fi-violet {
-      background: rgba(124, 58, 237, .18);
-      color: #a78bfa;
+      background: rgba(20, 184, 166, .18);
+      color: #5eead4;
     }
 
     .fi-cyan {
@@ -711,22 +700,23 @@
         <!-- Brand Identifier -->
         <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 40px;">
           <div
-            style="width: 36px; height: 36px; background: linear-gradient(135deg, var(--blue), var(--violet)); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; box-shadow: 0 4px 12px rgba(59,130,246,0.2);">
-            <i class="fa-solid fa-layer-group"></i>
+            style="width: 50px; height: 50px; display: flex; align-items: center; justify-content: center; overflow: visible;">
+            <img src="{% static 'tracker/server_icon_login.png' %}" alt="Server Icon"
+              style="width: 140%; height: 140%; object-fit: contain; margin-top: 4px;">
           </div>
           <span
-            style="font-size: 13px; font-weight: 700; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.1em;">R&amp;R
-            Tracker</span>
+            style="font-size: 17px; font-weight: 600; color: var(--slate-400); text-transform: uppercase; letter-spacing: 0.05em; line-height: 1;">SERVER
+            &amp; DB Management</span>
         </div>
 
         <!-- Heading -->
-        <h1 class="login-heading display" style="margin-bottom: 28px;">Welcome back <br /></h1>
+        <h1 class="login-heading display" style="margin-bottom: 28px;">Welcome <br /></h1>
 
         <!-- Error -->
         {% if form.errors %}
         <div class="error-box">
           <i class="fa-solid fa-circle-exclamation"></i>
-          <p>Invalid credentials. Please check your username and password and try again.</p>
+          <p>Invalid credentials. Please check your email and password and try again.</p>
         </div>
         {% endif %}
 
@@ -736,11 +726,11 @@
 
           <!-- Username -->
           <div class="form-group">
-            <label class="form-label" for="id_username">Username</label>
+            <label class="form-label" for="id_username">Mail Address</label>
             <div class="field-wrap">
-              <i class="fa-solid fa-user field-icon"></i>
-              <input type="text" id="id_username" name="username" class="form-input" placeholder="e.g. admin" required
-                autofocus autocomplete="username" />
+              <i class="fa-solid fa-envelope field-icon"></i>
+              <input type="text" id="id_username" name="username" class="form-input" placeholder="e.g. name@domain.com"
+                required autofocus autocomplete="username" />
             </div>
           </div>
 
@@ -748,7 +738,7 @@
           <div class="form-group">
             <div class="pw-row">
               <label class="form-label" for="id_password" style="margin-bottom:0;">Password</label>
-              <a href="#" class="forgot-link">Forgot?</a>
+
             </div>
             <div class="field-wrap">
               <i class="fa-solid fa-lock field-icon"></i>
@@ -787,15 +777,15 @@
           <div class="logo-ring"></div>
           <div class="logo-ring-2"></div>
           <div class="logo-glow"></div>
-          <img src="{% static 'tracker/devops_logo.png' %}" alt="DevOps R&R Tracker Logo" class="logo-img"
+          <img src="{% static 'tracker/devops_logo.png' %}" alt="Server and DB Management Logo" class="logo-img"
             onerror="this.style.display='none'; document.getElementById('logoFallback').style.display='flex';" />
           <div class="logo-icon-fallback" id="logoFallback">
-            <i class="fa-solid fa-layer-group"></i>
+            <i class="fa-solid fa-server"></i>
           </div>
         </div>
 
         <h2 class="brand-title">
-          DevOps <span>R&amp;R</span><br />Tracker
+          Server <span>&amp;</span> DB<br />Management
         </h2>
 
       </div>
