@@ -9,202 +9,183 @@
 
 <div id="page-dash" class="page-section">
 
-  <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-    <div class="flex items-center gap-3">
-      <div>
-        <h2 class="text-[15px] font-bold text-slate-900 tracking-tight flex items-center gap-2">
-          <span>Server Fleet</span>
-          <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">{{ servers|length }} Total</span>
-        </h2>
-      </div>
-    </div>
+  <!-- KPI STAT CARDS -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 mb-4">
 
-    <!-- Right: Global Actions (Clean, Unwrapped, Uniform Height) -->
-    <div class="flex items-center gap-2 flex-wrap">
-      <!-- Trigger Daily Check on Important Servers -->
-      <button id="btn-run-important-checks" onclick="runAllServersCheck(true)"
-        class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300 hover:bg-amber-100 hover:border-amber-400 transition-all shadow-2xs whitespace-nowrap cursor-pointer"
-        title="Trigger automated health check on Important servers only">
-        <i id="important-check-spinner" class="fa-solid fa-star text-amber-500 text-xs"></i>
-        <span id="important-check-text">Check Important{% if important_servers_count %} ({{ important_servers_count }}){% endif %}</span>
-      </button>
-
-      <!-- Main Trigger: Run All Server Checks -->
-      <button id="btn-run-all-checks" onclick="runAllServersCheck(false)"
-        class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 transition-all shadow-2xs whitespace-nowrap cursor-pointer"
-        title="Trigger automated health check across all registered servers">
-        <i id="all-check-spinner" class="fa-solid fa-rotate text-emerald-600 text-xs"></i>
-        <span id="all-check-text">Check All Fleet ({{ servers|length }})</span>
-      </button>
-
-      <!-- SOP Procedure -->
-      <button onclick="openMaintenanceModal()"
-        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-2xs whitespace-nowrap cursor-pointer"
-        title="Server Maintenance Standard Operating Procedure">
-        <i class="fa-regular fa-file-pdf text-indigo-500 text-xs"></i>
-        <span>Procedure</span>
-      </button>
-
-      <!-- Quick Log -->
-      <button onclick="openQuickLog()"
-        class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-amber-600 hover:border-amber-200 transition-all shadow-2xs whitespace-nowrap cursor-pointer"
-        title="Quick Task Verification Log">
-        <i class="fa-solid fa-bolt text-amber-500 text-xs"></i>
-        <span>Quick Log</span>
-      </button>
-
-      <!-- Add Server (Primary CTA) -->
-      <button onclick="openAddServerModal()"
-        class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-all shadow-xs whitespace-nowrap cursor-pointer"
-        title="Add New Server">
-        <i class="fa-solid fa-plus text-[11px]"></i>
-        <span>Add Server</span>
-      </button>
-    </div>
-  </div>
-
-  <!-- 5 KPI STAT CARDS (REAL DATA ONLY - SLEEK PRODUCTION STANDARD) -->
-  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 mb-6">
     <!-- Card 1: Total Servers -->
-    <div class="bg-white rounded-2xl border border-slate-100 p-3.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-md hover:border-blue-100 transition-all duration-200 flex items-center gap-3.5">
-      <div class="w-11 h-11 rounded-2xl bg-[#edf5ff] flex items-center justify-center flex-shrink-0 text-[#2563eb]">
-        <svg viewBox="0 0 24 24" class="w-6 h-6" fill="currentColor">
-          <path d="M4 5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5zm3 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm10 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM4 11a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2zm3 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm10 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zM4 17a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-2zm3 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm10 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2z"/>
-        </svg>
-      </div>
-      <div class="flex-1 min-w-0">
-        <div class="text-[12px] font-semibold text-slate-500 leading-none truncate">Total Servers</div>
-        <div class="flex items-center gap-2 mt-1.5">
-          <span class="text-[22px] font-bold text-slate-900 leading-none tracking-tight">{{ total_servers_count }}</span>
-          <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-[#e6f9f0] text-[#10b981]">
-            <i class="fa-solid fa-arrow-trend-up text-[9px]"></i> 0%
-          </span>
+    <div class="bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors flex flex-col">
+      <div class="px-4 pt-3.5 pb-3 flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-500 leading-none">Total Servers</div>
+          <div class="mt-2 text-[26px] font-display font-semibold text-slate-900 leading-none tracking-tight tabular-nums">{{ total_servers_count }}</div>
         </div>
-        <div class="text-[11px] text-slate-400 font-normal leading-none mt-1.5 truncate">Across all environments</div>
+        <div class="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="8" x="2" y="2" rx="2"/><rect width="20" height="8" x="2" y="14" rx="2"/><line x1="6" x2="6.01" y1="6" y2="6"/><line x1="6" x2="6.01" y1="18" y2="18"/></svg>
+        </div>
+      </div>
+      <div class="mt-auto px-4 h-9 border-t border-slate-100 flex items-center justify-between gap-3">
+        <span class="text-[11.5px] text-slate-500 truncate">Across all environments</span>
+        <span class="inline-flex items-center gap-1 text-[11.5px] font-semibold text-slate-500 tabular-nums flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>0%
+        </span>
       </div>
     </div>
 
     <!-- Card 2: Operational -->
-    <div class="bg-white rounded-2xl border border-slate-100 p-3.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-md hover:border-emerald-100 transition-all duration-200 flex items-center gap-3.5">
-      <div class="w-11 h-11 rounded-2xl bg-[#eafaf1] flex items-center justify-center flex-shrink-0">
-        <div class="w-6 h-6 rounded-full bg-[#10b981] flex items-center justify-center text-white text-[11px] shadow-xs">
-          <i class="fa-solid fa-check"></i>
+    <div class="bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors flex flex-col">
+      <div class="px-4 pt-3.5 pb-3 flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-500 leading-none">Operational</div>
+          <div class="mt-2 text-[26px] font-display font-semibold text-slate-900 leading-none tracking-tight tabular-nums">{{ operational_servers_count }}</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></svg>
         </div>
       </div>
-      <div class="flex-1 min-w-0">
-        <div class="text-[12px] font-semibold text-slate-500 leading-none truncate">Operational</div>
-        <div class="flex items-center gap-2 mt-1.5">
-          <span class="text-[22px] font-bold text-slate-900 leading-none tracking-tight">{{ operational_servers_count }}</span>
-          <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-[#e6f9f0] text-[#10b981]">
-            <i class="fa-solid fa-arrow-up text-[9px]"></i> {{ operational_pct }}%
-          </span>
-        </div>
-        <div class="text-[11px] text-slate-400 font-normal leading-none mt-1.5 truncate">Running normally</div>
+      <div class="mt-auto px-4 h-9 border-t border-slate-100 flex items-center justify-between gap-3">
+        <span class="text-[11.5px] text-slate-500 truncate">Running normally</span>
+        <span class="inline-flex items-center gap-1 text-[11.5px] font-semibold text-emerald-600 tabular-nums flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>{{ operational_pct }}%
+        </span>
       </div>
     </div>
 
     <!-- Card 3: Critical -->
-    <div class="bg-white rounded-2xl border border-slate-100 p-3.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-md hover:border-rose-100 transition-all duration-200 flex items-center gap-3.5">
-      <div class="w-11 h-11 rounded-2xl bg-[#feecee] flex items-center justify-center flex-shrink-0">
-        <div class="w-6 h-6 rounded-full bg-[#ef4444] flex items-center justify-center text-white text-[11px] font-bold shadow-xs">
-          <i class="fa-solid fa-exclamation"></i>
+    <div class="bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors flex flex-col">
+      <div class="px-4 pt-3.5 pb-3 flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-500 leading-none">Critical</div>
+          <div class="mt-2 text-[26px] font-display font-semibold {% if critical_servers_count > 0 %}text-rose-600{% else %}text-slate-900{% endif %} leading-none tracking-tight tabular-nums">{{ critical_servers_count }}</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
         </div>
       </div>
-      <div class="flex-1 min-w-0">
-        <div class="text-[12px] font-semibold text-slate-500 leading-none truncate">Critical</div>
-        <div class="flex items-center gap-2 mt-1.5">
-          <span class="text-[22px] font-bold {% if critical_servers_count > 0 %}text-[#ef4444]{% else %}text-slate-900{% endif %} leading-none tracking-tight">{{ critical_servers_count }}</span>
-          <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10.5px] font-bold {% if critical_servers_count > 0 %}bg-[#feecee] text-[#ef4444]{% else %}bg-slate-100 text-slate-600{% endif %}">
-            <i class="fa-solid fa-arrow-down text-[9px]"></i> {{ critical_pct }}%
-          </span>
-        </div>
-        <div class="text-[11px] text-slate-400 font-normal leading-none mt-1.5 truncate">Requires attention</div>
+      <div class="mt-auto px-4 h-9 border-t border-slate-100 flex items-center justify-between gap-3">
+        <span class="text-[11.5px] text-slate-500 truncate">Requires attention</span>
+        <span class="inline-flex items-center gap-1 text-[11.5px] font-semibold {% if critical_servers_count > 0 %}text-rose-600{% else %}text-slate-500{% endif %} tabular-nums flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.25" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"/><polyline points="16 17 22 17 22 11"/></svg>{{ critical_pct }}%
+        </span>
       </div>
     </div>
 
     <!-- Card 4: Tasks Completion -->
-    <div class="bg-white rounded-2xl border border-slate-100 p-3.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-md hover:border-indigo-100 transition-all duration-200 flex items-center gap-3.5">
-      <div class="w-11 h-11 rounded-2xl bg-[#edf5ff] flex items-center justify-center flex-shrink-0 text-[#2563eb]">
-        <svg viewBox="0 0 24 24" class="w-6 h-6" fill="currentColor">
-          <circle cx="5" cy="7" r="1.5" />
-          <path d="M9 6h11a1 1 0 0 1 0 2H9a1 1 0 0 1 0-2z" />
-          <circle cx="5" cy="12" r="1.5" />
-          <path d="M9 11h11a1 1 0 0 1 0 2H9a1 1 0 0 1 0-2z" />
-          <circle cx="5" cy="17" r="1.5" />
-          <path d="M9 16h11a1 1 0 0 1 0 2H9a1 1 0 0 1 0-2z" />
-        </svg>
-      </div>
-      <div class="flex-1 min-w-0">
-        <div class="text-[12px] font-semibold text-slate-500 leading-none truncate">Tasks Completion</div>
-        <div class="flex items-center gap-2 mt-1.5">
-          <span class="text-[20px] font-bold text-slate-900 leading-none tracking-tight">{{ weekly_imp_tasks_done }}/{{ weekly_imp_tasks_total }}</span>
-          <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10.5px] font-bold bg-[#e6f9f0] text-[#10b981]">
-            {{ weekly_imp_tasks_pct }}%
-          </span>
+    <div class="bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors flex flex-col">
+      <div class="px-4 pt-3.5 pb-3 flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-500 leading-none">Weekly Important Tasks</div>
+          <div class="mt-2 flex items-baseline gap-1 leading-none">
+            <span class="text-[26px] font-display font-semibold text-slate-900 leading-none tracking-tight tabular-nums">{{ weekly_imp_tasks_done }}</span>
+            <span class="text-sm font-medium text-slate-400 tabular-nums">/ {{ weekly_imp_tasks_total }}</span>
+          </div>
         </div>
-        <div class="w-full h-1.5 bg-[#f1f5f9] rounded-full overflow-hidden mt-2">
-          <div class="h-full bg-[#10b981] rounded-full transition-all duration-500" style="width: {{ weekly_imp_tasks_pct }}%"></div>
+        <div class="w-8 h-8 rounded-lg bg-violet-50 text-violet-600 flex items-center justify-center flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></svg>
+        </div>
+      </div>
+      <div class="mt-auto px-4 h-9 border-t border-slate-100 flex items-center justify-between gap-3">
+        <span class="text-[11.5px] text-slate-500 truncate">Done this week</span>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <div class="w-12 h-[3px] bg-slate-100 rounded-full overflow-hidden">
+            <div class="h-full bg-violet-500 rounded-full" style="width: {{ weekly_imp_tasks_pct }}%"></div>
+          </div>
+          <span class="text-[11.5px] font-semibold text-violet-600 tabular-nums">{{ weekly_imp_tasks_pct }}%</span>
         </div>
       </div>
     </div>
 
     <!-- Card 5: Last Updated -->
-    <div class="bg-white rounded-2xl border border-slate-100 p-3.5 shadow-[0_2px_10px_rgba(0,0,0,0.025)] hover:shadow-md hover:border-purple-100 transition-all duration-200 flex items-center gap-3.5">
-      <div class="w-11 h-11 rounded-2xl bg-[#f5eefc] flex items-center justify-center flex-shrink-0 text-[#8b5cf6]">
-        <svg viewBox="0 0 24 24" class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="9" />
-          <polyline points="12 7 12 12 15 15" />
-        </svg>
+    <div class="bg-white rounded-lg border border-slate-200 hover:border-slate-300 transition-colors flex flex-col">
+      <div class="px-4 pt-3.5 pb-3 flex items-start justify-between gap-3">
+        <div class="min-w-0">
+          <div class="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-slate-500 leading-none">Last Updated</div>
+          <div class="mt-2 text-[17px] font-display font-semibold text-slate-900 leading-none tracking-tight truncate">{{ last_updated_time }}</div>
+        </div>
+        <div class="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
       </div>
-      <div class="flex-1 min-w-0">
-        <div class="text-[12px] font-semibold text-slate-500 leading-none truncate">Last Updated</div>
-        <div class="mt-1.5">
-          <span class="text-[14.5px] font-bold text-slate-900 leading-none tracking-tight block truncate">{{ last_updated_time }}</span>
-        </div>
-        <div class="flex items-center gap-1.5 mt-2 text-[11px] font-medium text-slate-600">
-          <span class="w-2 h-2 rounded-full bg-[#10b981]"></span>
-          <span>Live Monitoring</span>
-        </div>
+      <div class="mt-auto px-4 h-9 border-t border-slate-100 flex items-center justify-between gap-3">
+        <span class="text-[11.5px] text-slate-500 truncate">System status</span>
+        <span class="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-emerald-600 flex-shrink-0">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Live
+        </span>
       </div>
     </div>
   </div>
 
-  <!-- SEARCH & FILTER TOOLBAR -->
-  <div class="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3 bg-white px-4 py-2.5 rounded-xl border border-slate-200 shadow-2xs">
-    <div class="flex items-center gap-3 flex-wrap flex-1">
-      <!-- Search Input -->
-      <div class="relative min-w-[220px] max-w-xs flex-1 group">
-        <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs group-focus-within:text-emerald-500 transition-colors"></i>
-        <input type="text" id="server-search" placeholder="Search IP or hostname..." autocomplete="off"
-          readonly onfocus="this.removeAttribute('readonly');"
-          class="w-full bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 py-1.5 text-xs text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all cursor-text placeholder:text-slate-400"
-          onkeyup="filterServers()">
-      </div>
+  <!-- UNIFIED FLEET TOOLBAR -->
+  <div class="mb-4 flex items-center gap-3 flex-wrap bg-white px-3 py-2 rounded-xl border border-slate-200">
 
-      <!-- Status Filter Tabs -->
-      <div class="inline-flex p-0.5 bg-slate-100 rounded-lg border border-slate-200/80">
-        <button onclick="filterByStatus('all')"
-          class="status-btn active px-3 py-1 text-xs font-semibold rounded-md transition-all bg-white text-slate-900 shadow-2xs">All</button>
-        <button onclick="filterByStatus('starred')"
-          class="status-btn px-3 py-1 text-xs font-semibold rounded-md transition-all text-slate-500 hover:text-slate-800 flex items-center gap-1.5">
-          <i class="fa-solid fa-star text-amber-400 text-[10px]"></i>Starred
-        </button>
-        <button onclick="filterByStatus('up')"
-          class="status-btn px-3 py-1 text-xs font-semibold rounded-md transition-all text-slate-500 hover:text-slate-800">Online</button>
-        <button onclick="filterByStatus('down')"
-          class="status-btn px-3 py-1 text-xs font-semibold rounded-md transition-all text-slate-500 hover:text-slate-800">Critical</button>
-      </div>
+    <!-- Search Input -->
+    <div class="relative min-w-[220px] max-w-xs flex-1 group">
+      <!-- Honeypot decoys: Chrome fills the first matching inputs on the page -->
+      <input type="text" name="username" autocomplete="username" tabindex="-1" aria-hidden="true"
+        style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;">
+      <input type="password" name="password" autocomplete="current-password" tabindex="-1" aria-hidden="true"
+        style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;">
+      <input type="email" name="email" autocomplete="email" tabindex="-1" aria-hidden="true"
+        style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;">
+
+      <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs group-focus-within:text-emerald-500 transition-colors"></i>
+      <input type="search" id="server-search" name="srv-q-{{ request.user.id|default:'0' }}-{% now 'U' %}"
+        placeholder="Search IP or hostname..." value="" disabled
+        autocomplete="new-password" autocorrect="off" autocapitalize="off" spellcheck="false"
+        data-form-type="other" data-lpignore="true" data-1p-ignore="true" data-bwignore="true"
+        aria-autocomplete="none" role="searchbox"
+        class="w-full h-8 bg-slate-50 border border-slate-200 rounded-lg pl-8 pr-3 text-xs text-slate-800 focus:outline-none focus:border-emerald-500 focus:bg-white transition-all cursor-text placeholder:text-slate-400 server-search-input"
+        onkeyup="filterServers()">
     </div>
 
-    <!-- Sort Dropdown on the Right -->
-    <div class="flex items-center gap-2 self-end md:self-auto border-t md:border-t-0 pt-2 md:pt-0 border-slate-100">
-      <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Sort:</span>
-      <select id="server-sort" onchange="sortServers()" class="bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg px-2.5 py-1.5 focus:outline-none focus:border-emerald-500 cursor-pointer">
-        <option value="important">Important First</option>
-        <option value="recent">Recent Activity</option>
-        <option value="name">Name (A-Z)</option>
-      </select>
+    <!-- Status Filter Tabs -->
+    <div class="inline-flex h-8 p-0.5 bg-slate-100 rounded-lg border border-slate-200/80">
+      <button onclick="filterByStatus('all')"
+        class="status-btn active px-3 text-xs font-semibold rounded-md transition-all bg-white text-slate-900 shadow-2xs">All</button>
+      <button onclick="filterByStatus('starred')"
+        class="status-btn px-3 text-xs font-semibold rounded-md transition-all text-slate-500 hover:text-slate-800 flex items-center gap-1.5">
+        <i class="fa-solid fa-star text-amber-400 text-[10px]"></i>Starred
+      </button>
+      <button onclick="filterByStatus('up')"
+        class="status-btn px-3 text-xs font-semibold rounded-md transition-all text-slate-500 hover:text-slate-800">Online</button>
+      <button onclick="filterByStatus('down')"
+        class="status-btn px-3 text-xs font-semibold rounded-md transition-all text-slate-500 hover:text-slate-800">Critical</button>
     </div>
+
+    <!-- Spacer pushes the right-side cluster to the end -->
+    <div class="flex-1"></div>
+
+    <!-- Sort -->
+    <select id="server-sort" onchange="sortServers()"
+      class="h-8 bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg px-2.5 focus:outline-none focus:border-emerald-500 cursor-pointer">
+      <option value="important">Important First</option>
+      <option value="recent">Recent Activity</option>
+      <option value="name">Name (A-Z)</option>
+    </select>
+
+    <!-- Divider -->
+    <span class="w-px h-6 bg-slate-200"></span>
+
+    <!-- Action buttons -->
+    <button id="btn-run-all-checks" onclick="runAllServersCheck(false)"
+      class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 hover:border-emerald-300 transition-all whitespace-nowrap cursor-pointer"
+      title="Trigger automated health check across all registered servers">
+      <i id="all-check-spinner" class="fa-solid fa-rotate text-emerald-600 text-[11px]"></i>
+      <span id="all-check-text">Check All ({{ servers|length }})</span>
+    </button>
+
+    <button onclick="openMaintenanceModal()"
+      class="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-indigo-600 hover:border-indigo-200 transition-all whitespace-nowrap cursor-pointer"
+      title="Server Maintenance Standard Operating Procedure">
+      <i class="fa-regular fa-file-pdf text-indigo-500 text-[11px]"></i>
+      <span>Procedure</span>
+    </button>
+
+    <button onclick="openAddServerModal()"
+      class="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-lg text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-all whitespace-nowrap cursor-pointer"
+      title="Add New Server">
+      <i class="fa-solid fa-plus text-[11px]"></i>
+      <span>Add Server</span>
+    </button>
   </div>
 
   <div class="mb-8">
@@ -920,6 +901,13 @@
 {% endblock %}
 
 {% block extra_scripts %}
+<style>
+  /* Chrome fires `animationstart` on this when it autofills — we use it to clear */
+  @keyframes onAutoFillStart { from { opacity: 1; } to { opacity: 1; } }
+  @keyframes onAutoFillCancel { from { opacity: 1; } to { opacity: 1; } }
+  #server-search:-webkit-autofill { animation-name: onAutoFillStart; }
+  #server-search:not(:-webkit-autofill) { animation-name: onAutoFillCancel; }
+</style>
 <script>
   const TASKS = {{ task_data_json| safe }};
   let currentModalStatus = 'done';
@@ -1232,11 +1220,30 @@
   document.addEventListener('DOMContentLoaded', () => {
     initCharts();
     sortServers();
+    killSearchAutofill();
     // Auto-load first server's logs
     {% if servers %}
     loadServerLog({{ servers.0.id }}, '{{ servers.0.name }}');
   {% endif %}
   });
+
+  // The search input ships `disabled` so Chrome cannot autofill it on load.
+  // We enable it (and keep it clean) once the DOM is ready.
+  function killSearchAutofill() {
+    const el = document.getElementById('server-search');
+    if (!el) return;
+    el.value = '';
+    el.removeAttribute('disabled');
+    const clear = () => {
+      if (el === document.activeElement) return;
+      if (el.value) el.value = '';
+    };
+    for (let i = 0; i < 20; i++) setTimeout(clear, i * 100);
+    el.addEventListener('animationstart', (e) => {
+      if (e.animationName === 'onAutoFillStart') clear();
+    });
+    window.addEventListener('pageshow', () => { el.value = ''; });
+  }
 
   // ── PER-SERVER LOG TABS ────────────────────────────────────────
   let activeLogServerId = null;
